@@ -28,7 +28,13 @@ export default function LoginPage() {
 
       const payload = (await res.json()) as {
         error?: string;
-        user?: { name: string; email: string; frequency: DrillFrequency; joinedAt: string };
+        user?: {
+          name: string;
+          email: string;
+          frequency: DrillFrequency;
+          joinedAt: string;
+          trainingActive: boolean;
+        };
         mustChangePassword?: boolean;
       };
 

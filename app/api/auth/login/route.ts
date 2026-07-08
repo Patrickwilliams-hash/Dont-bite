@@ -28,6 +28,7 @@ export async function POST(req: Request) {
         passwordHash: true,
         isActive: true,
         mustChangePassword: true,
+        trainingActive: true,
       },
     });
 
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
         email: user.email,
         frequency: user.frequency,
         joinedAt: user.joinedAt,
+        trainingActive: user.trainingActive,
       },
       mustChangePassword: user.mustChangePassword,
     });

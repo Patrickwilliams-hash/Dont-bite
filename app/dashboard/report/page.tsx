@@ -48,11 +48,15 @@ export default function ReportPage() {
   if (!store.user) return null;
 
   const month = new Date().toLocaleDateString("en-NZ", { month: "long", year: "numeric" });
+  const completedDrills = store.stats.spotted + store.stats.caught;
+  const spotRate =
+    completedDrills > 0 ? `${Math.round((store.stats.spotted / completedDrills) * 100)}%` : "—";
+  const hasTrainingHistory = store.stats.monthlyTrend.length > 0;
 
   function handleShare() {
     const text = `My Don't Bite Report (${month}):
 Drills: ${store.stats.drillsSent} | Spotted: ${store.stats.spotted} | Caught: ${store.stats.caught}
-Streak: ${store.stats.streak}
+Spot rate: ${spotRate}
 Don't take the bait.`;
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -81,13 +85,19 @@ Don't take the bait.`;
         <StatCard label="Drills sent" value={store.stats.drillsSent} />
         <StatCard label="Scams spotted" value={store.stats.spotted} />
         <StatCard label="Times caught" value={store.stats.caught} />
-        <StatCard label="Streak" value={store.stats.streak} />
+        <StatCard label="Spot rate" value={spotRate} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <Card>
           <h2 className="font-bold text-navy mb-4">Monthly activity</h2>
-          <ReportBarChart data={store.stats.monthlyTrend} />
+          {hasTrainingHistory ? (
+            <ReportBarChart data={store.stats.monthlyTrend} />
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-navy/50 text-sm text-center px-6">
+              Once you&apos;ve completed a few drills, your activity will appear here.
+            </div>
+          )}
         </Card>
         <Card>
           <h2 className="font-bold text-navy mb-4">Where scams caught you</h2>

@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     const user = await db.user.create({
       data: { name, email, frequency, passwordHash, role: "user", isActive: true },
-      select: { name: true, email: true, frequency: true, joinedAt: true },
+      select: { name: true, email: true, frequency: true, joinedAt: true, trainingActive: true },
     });
 
     return NextResponse.json({ user }, { status: 201 });

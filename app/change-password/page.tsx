@@ -44,7 +44,13 @@ function ChangePasswordForm() {
 
       const payload = (await res.json()) as {
         error?: string;
-        user?: { name: string; email: string; frequency: DrillFrequency; joinedAt: string };
+        user?: {
+          name: string;
+          email: string;
+          frequency: DrillFrequency;
+          joinedAt: string;
+          trainingActive: boolean;
+        };
       };
 
       if (!res.ok || !payload.user) {
@@ -65,7 +71,7 @@ function ChangePasswordForm() {
     <div className="max-w-lg mx-auto px-5 py-16">
       <h1 className="font-display text-3xl font-black text-navy mb-2">Change your password</h1>
       <p className="text-navy/60 mb-6">
-        Your password was reset by an admin. Please set a new one to continue.
+        Enter your current password, then choose a new one for your account.
       </p>
 
       <Card>

@@ -1,9 +1,8 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { useParams } from "next/navigation";
 import { getDrill } from "@/lib/drill-templates";
-import { clickEmailLink } from "@/lib/mock-store";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { RedFlagHighlight } from "@/components/drill/RedFlagHighlight";
 import { FakeUrlBar } from "@/components/drill/FakeUrlBar";
@@ -13,14 +12,8 @@ import { CheckCircle, Lock } from "lucide-react";
 
 function CaughtContent() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const drillId = params.id as string;
-  const emailId = searchParams.get("emailId");
   const drill = getDrill(drillId);
-
-  useEffect(() => {
-    if (emailId) clickEmailLink(emailId);
-  }, [emailId]);
 
   if (!drill) {
     return <div className="p-10 text-center">Lesson not found</div>;
@@ -108,8 +101,8 @@ function CaughtContent() {
       </div>
 
       <div className="flex flex-wrap gap-3 justify-center">
-        <Button href="/dashboard/inbox" size="lg">
-          Back to Inbox
+        <Button href="/dashboard" size="lg">
+          Back to Dashboard
         </Button>
         <Button href={`/learn/${drill.learnSlug}`} variant="ghost" size="lg">
           Read Full Article

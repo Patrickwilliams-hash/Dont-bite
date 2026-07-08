@@ -38,7 +38,13 @@ export default function SignUpPage() {
 
       const payload = (await res.json()) as {
         error?: string;
-        user?: { name: string; email: string; frequency: DrillFrequency; joinedAt: string };
+        user?: {
+          name: string;
+          email: string;
+          frequency: DrillFrequency;
+          joinedAt: string;
+          trainingActive: boolean;
+        };
       };
 
       if (!res.ok || !payload.user) {
