@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setLocalUserSession, type DrillFrequency } from "@/lib/mock-store";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-export default function ChangePasswordPage() {
+function ChangePasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultEmail = searchParams.get("email") ?? "";
@@ -132,5 +132,13 @@ export default function ChangePasswordPage() {
         </form>
       </Card>
     </div>
+  );
+}
+
+export default function ChangePasswordPage() {
+  return (
+    <Suspense fallback={<div className="max-w-lg mx-auto px-5 py-16 text-navy/60">Loading...</div>}>
+      <ChangePasswordForm />
+    </Suspense>
   );
 }

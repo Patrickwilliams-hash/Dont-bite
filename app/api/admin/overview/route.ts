@@ -17,14 +17,15 @@ export async function GET() {
         createdAt: true,
       },
     });
+    type AdminUser = (typeof users)[number];
 
     const stats = {
       totalUsers: users.length,
-      activeUsers: users.filter((u) => u.isActive).length,
-      weeklyUsers: users.filter((u) => u.frequency === "weekly").length,
-      fortnightlyUsers: users.filter((u) => u.frequency === "fortnightly").length,
-      monthlyUsers: users.filter((u) => u.frequency === "monthly").length,
-      usersLoggedIn: users.filter((u) => u.lastLoginAt !== null).length,
+      activeUsers: users.filter((u: AdminUser) => u.isActive).length,
+      weeklyUsers: users.filter((u: AdminUser) => u.frequency === "weekly").length,
+      fortnightlyUsers: users.filter((u: AdminUser) => u.frequency === "fortnightly").length,
+      monthlyUsers: users.filter((u: AdminUser) => u.frequency === "monthly").length,
+      usersLoggedIn: users.filter((u: AdminUser) => u.lastLoginAt !== null).length,
     };
 
     return NextResponse.json({ users, stats });
