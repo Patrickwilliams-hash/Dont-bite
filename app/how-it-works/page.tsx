@@ -41,8 +41,8 @@ export default function HowItWorksPage() {
           <PhilMascot pose="magnifier" size={170} />
         </div>
         <p className="text-sm font-black uppercase tracking-widest text-coral-dark mb-2">How it works</p>
-        <h1 className="font-display text-4xl md:text-6xl font-black text-navy leading-[0.95] max-w-3xl mb-4">
-          Corporate-grade scam drills, made for everyday people.
+        <h1 className="font-display text-4xl md:text-6xl font-black tracking-[-0.02em] text-navy leading-[1.02] max-w-3xl mb-4">
+          Realistic scam drills for everyday people.
         </h1>
         <p className="text-base md:text-lg text-navy/80 leading-relaxed max-w-2xl">
           Don&apos;t Bite gives you the same &quot;safe failure&quot; training big organisations

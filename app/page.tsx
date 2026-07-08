@@ -40,7 +40,7 @@ const scamTypes = [
   { icon: Package, title: "NZ Post-Style Parcel Alerts", color: "bg-[#E8F4F8]" },
   { icon: Building2, title: "Bank Security Alerts", color: "bg-[#E8EEF8]" },
   { icon: Gift, title: "Trade Me & Marketplace Setups", color: "bg-[#FFF0E8]" },
-  { icon: CreditCard, title: "IRD Refund & Payment Traps", color: "bg-[#F0E8F8]" },
+  { icon: CreditCard, title: "Subscription & Payment Traps", color: "bg-[#F0E8F8]" },
 ];
 
 const howSteps = [
@@ -67,16 +67,12 @@ export default function HomePage() {
         <div className="hero-inner">
           <div className="hero-copy">
             <h1>
-              Get real scam emails safely — and learn how to spot them <span>before</span> it
+              Get real scam emails safely, and learn how to spot them <span>before</span> it
               matters.
             </h1>
             <p className="hero-lead">
               Don&apos;t Bite sends safe training emails to your inbox, so you can practise with
               realistic phishing and scam scenarios before a real one lands.
-            </p>
-            <p className="text-sm md:text-base text-navy/70 mt-3 max-w-[42ch]">
-              Phil is your friendly coach throughout each drill, with instant guidance when you
-              need it.
             </p>
 
             <div className="hero-cta-block">
@@ -122,38 +118,6 @@ export default function HomePage() {
               <p className="text-muted text-sm leading-relaxed">{card.body}</p>
             </Card>
           ))}
-        </div>
-      </section>
-
-      {/* Reassurance */}
-      <section className="mx-5 md:mx-10 mb-16 max-w-6xl lg:mx-auto">
-        <div className="rounded-[2rem] bg-white border border-navy/10 px-5 md:px-8 py-8 md:py-10 shadow-[var(--shadow-soft)]">
-          <div className="text-center mb-7">
-            <p className="section-eyebrow mb-2">Reassurance</p>
-            <h2 className="font-display text-3xl md:text-4xl font-black text-navy">
-              Built to teach, not to trick.
-            </h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
-            {[
-              "No real passwords collected",
-              "No banking details collected",
-              "Safe training only",
-              "Instant debrief if you click",
-              "No shame, just learning",
-            ].map((item) => (
-              <div
-                key={item}
-                className="rounded-2xl bg-blush/55 border border-navy/10 px-4 py-3 text-sm font-bold text-navy text-center"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-sm md:text-base text-navy/70 max-w-3xl mx-auto">
-            Training service only. We never collect real passwords, banking details, or sensitive
-            form entries.
-          </p>
         </div>
       </section>
 

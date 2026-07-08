@@ -1,4 +1,3 @@
-import { PhilMascot } from "@/components/phil/PhilMascot";
 import { PhilTip } from "@/components/phil/PhilMascot";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -6,105 +5,135 @@ import { Card } from "@/components/ui/Card";
 export default function AboutPage() {
   return (
     <div className="max-w-4xl mx-auto px-5 md:px-10 py-16">
-      <div className="grid md:grid-cols-2 gap-10 items-center mb-16">
-        <div>
-          <p className="text-sm font-black uppercase tracking-widest text-coral mb-2">About Don&apos;t Bite</p>
-          <h1 className="font-display text-4xl md:text-5xl font-black text-navy mb-4">
-            About Don&apos;t Bite
-          </h1>
-          <p className="text-lg text-navy/70 leading-relaxed">
-            Don&apos;t Bite helps people recognise scams by safely practising with realistic examples
-            before they face the real thing.
-          </p>
-        </div>
-        <PhilMascot pose="sign" size={260} className="mx-auto animate-float" />
-      </div>
+      <section className="mb-12">
+        <p className="text-sm font-black uppercase tracking-widest text-coral mb-2">About Don&apos;t Bite</p>
+        <h1 className="font-display text-4xl md:text-5xl font-black text-navy mb-4">
+          Why I built Don&apos;t Bite
+        </h1>
+        <p className="text-lg text-navy/70 leading-relaxed max-w-3xl">
+          Don&apos;t Bite is built to give everyday people the kind of safe, realistic scam practice
+          that large organisations already give their staff.
+        </p>
+      </section>
 
       <div className="space-y-8 mb-16">
         <Card>
-          <h2 className="font-bold text-xl text-navy mb-3">A different way to learn</h2>
+          <h2 className="font-bold text-xl text-navy mb-4">Why I built Don&apos;t Bite</h2>
           <div className="space-y-4 text-navy/70 leading-relaxed">
             <p>
-              Most scam education tells people what to watch for after the fact. Don&apos;t Bite is
-              different. It gives people a safe way to experience realistic scam attempts, make
-              mistakes without consequences, and learn what gave the message away.
+              Before creating Don&apos;t Bite, I worked in banking, including credit card fraud and
+              chargebacks. I saw first-hand how often people were caught by scams and how often
+              the same tricks worked again and again.
             </p>
             <p>
-              This is practical training designed to build better instincts in the moment, when
-              emails feel urgent, familiar, or believable.
+              The people being scammed weren&apos;t stupid or careless. They were ordinary people
+              going about their lives. Sometimes they were busy. Sometimes they were worried.
+              Sometimes the message arrived at exactly the right moment and looked convincing
+              enough to make them act before they had time to think.
+            </p>
+            <p className="font-black text-navy text-lg">
+              Smart people get tricked too.
+            </p>
+            <p>
+              What struck me was that most scam education happens after the fact. We tell people
+              to watch out for suspicious links, check the sender&apos;s address and be wary of urgent
+              messages. That&apos;s useful advice, but knowing what to do and actually recognising a
+              convincing scam in your inbox are two different things.
+            </p>
+            <p>
+              Large organisations understand this. They don&apos;t just tell their employees about
+              phishing — they test them. Staff receive realistic simulation emails, get the
+              opportunity to practise spotting the warning signs, and learn from their mistakes in
+              a safe environment.
+            </p>
+            <p>So I started wondering:</p>
+            <p className="font-display text-2xl md:text-3xl font-black text-coral-dark leading-tight">
+              &ldquo;Why should corporations get all the drills?&rdquo;
+            </p>
+            <p>
+              What about our parents and grandparents? Families? Community groups? Small
+              businesses? Or simply anyone who wants to get better at recognising scams before
+              there&apos;s real money, personal information or stress involved?
+            </p>
+            <p>
+              That&apos;s why I created Don&apos;t Bite.
+            </p>
+            <p>
+              The idea is simple: give everyday people the opportunity to practise with realistic
+              scam emails in their real inbox, but without the real-world consequences.
+            </p>
+            <p>
+              If you spot the scam, great. If you don&apos;t, that&apos;s useful too. Instead of losing
+              money or handing information to a criminal, you get an explanation from Phil showing
+              you what you missed and what to look for next time.
+            </p>
+            <p>
+              There&apos;s no embarrassment and no judgement. The goal isn&apos;t to catch people out.
+            </p>
+            <p className="font-black text-navy">It&apos;s to help people build better instincts.</p>
+            <p>
+              Because the best time to learn how convincing a scam can be is before you encounter
+              the real thing.
             </p>
           </div>
         </Card>
 
         <Card>
-          <h2 className="font-bold text-xl text-navy mb-3">Why it exists</h2>
-          <div className="space-y-4 text-navy/70 leading-relaxed">
-            <p>
-              Scams are becoming more polished, personalised, and believable. They often look like
-              normal delivery updates, bank messages, marketplace chats, or subscription reminders.
-            </p>
-            <p>
-              The goal is not to make people paranoid. The goal is to help people pause, check,
-              and feel more confident about what they click.
-            </p>
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="font-bold text-xl text-navy mb-3">How it works</h2>
-          <ol className="space-y-3 text-navy/75">
+          <h2 className="font-bold text-xl text-navy mb-3">How Don&apos;t Bite helps</h2>
+          <ol className="space-y-3 text-navy/75 leading-relaxed">
             <li>
-              <span className="font-black text-navy">1.</span> You receive a safe training email.
+              <span className="font-black text-navy">1.</span> You receive a safe training email
+              in your real inbox.
             </li>
             <li>
-              <span className="font-black text-navy">2.</span> You decide what you would do.
+              <span className="font-black text-navy">2.</span> You decide what you would normally
+              do.
             </li>
             <li>
-              <span className="font-black text-navy">3.</span> Phil explains the warning signs
-              and what to check next time.
+              <span className="font-black text-navy">3.</span> If you click or take the bait,
+              Phil explains the warning signs.
+            </li>
+            <li>
+              <span className="font-black text-navy">4.</span> You learn what to look for next
+              time.
+            </li>
+            <li>
+              <span className="font-black text-navy">5.</span> Over time, you build better
+              scam-spotting instincts.
             </li>
           </ol>
         </Card>
 
         <Card>
-          <h2 className="font-bold text-xl text-navy mb-3">Safety and ethics</h2>
+          <h2 className="font-bold text-xl text-navy mb-3">Safe by design</h2>
           <ul className="space-y-2 text-navy/75">
-            <li>Don&apos;t Bite does not collect real passwords.</li>
-            <li>It does not collect banking details.</li>
-            <li>It does not shame users for mistakes.</li>
-            <li>It is designed for consent-based training.</li>
-            <li>Results are used for learning, not punishment.</li>
+            <li>No real passwords are collected.</li>
+            <li>No banking details are collected.</li>
+            <li>No sensitive form entries are stored.</li>
+            <li>No shame-based reporting.</li>
+            <li>Consent-based training.</li>
+            <li>Results are intended for learning, not punishment.</li>
           </ul>
         </Card>
 
         <Card>
-          <h2 className="font-bold text-xl text-navy mb-3">Who it&apos;s for</h2>
+          <h2 className="font-bold text-xl text-navy mb-3">Who Don&apos;t Bite is for</h2>
           <p className="text-navy/70 leading-relaxed">
-            Don&apos;t Bite is for individuals who want to get better at spotting scams, families,
-            community groups, small businesses, and organisations that want safer
-            phishing-awareness drills.
+            Don&apos;t Bite is for everyday people who want better scam instincts: individuals,
+            parents and grandparents, families, community groups, small businesses, and
+            organisations wanting a more human approach to scam-awareness training.
           </p>
         </Card>
 
         <PhilTip>
-          Phil is there to coach, not catch people out. He keeps feedback practical, friendly,
-          and focused on what to look for next time.
+          Phil is there to coach you, not catch you out.
         </PhilTip>
-
-        <Card>
-          <h2 className="font-bold text-xl text-navy mb-3">Built from real-world patterns</h2>
-          <p className="text-navy/70 leading-relaxed">
-            Don&apos;t Bite was shaped by repeated scam patterns seen in everyday financial disputes
-            and fraud complaints. It&apos;s being built as a practical prototype with one clear goal:
-            help people build safer click habits before real losses happen.
-          </p>
-        </Card>
       </div>
 
       <div className="text-center space-y-4">
         <p className="text-navy/75 max-w-2xl mx-auto">
-          Scams work because they feel normal in the moment. Don&apos;t Bite helps you build the habit
-          of stopping for a second before you click.
+          Scams work because they often feel normal in the moment. Don&apos;t Bite helps people build
+          the habit of stopping, checking and thinking before they click.
         </p>
         <Button href="/signup" size="lg">
           Give it a go

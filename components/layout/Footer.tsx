@@ -39,7 +39,7 @@ export function Footer() {
           </div>
         </div>
         <div className="pt-6 border-t border-navy/10 text-xs font-bold text-muted flex flex-col md:flex-row justify-between gap-2">
-          <p>Training service only. No personal data collected.</p>
+          <p>Training service only. We never collect real passwords or banking details.</p>
           <p suppressHydrationWarning>© {new Date().getFullYear()} Don&apos;t Bite</p>
         </div>
       </div>

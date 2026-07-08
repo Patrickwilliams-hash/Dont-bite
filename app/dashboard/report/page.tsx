@@ -69,7 +69,7 @@ Don't take the bait.`;
       </Link>
 
       <div className="flex flex-col md:flex-row items-center gap-6 mb-10">
-        <PhilMascot pose="sign" size={120} />
+        <PhilMascot pose="thinking" size={120} />
         <div>
           <p className="text-sm font-bold text-coral uppercase tracking-wide">Monthly Report</p>
           <h1 className="font-display text-3xl font-black text-navy">{month}</h1>
