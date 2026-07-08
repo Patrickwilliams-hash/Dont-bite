@@ -16,31 +16,31 @@ import {
 const immunityCards = [
   {
     icon: Mail,
-    title: "Realistic Phishing Drills",
-    body: "Practice emails that feel like the real thing — without the real risk.",
+    title: "Safe Training Emails",
+    body: "Don&apos;t Bite sends safe drill emails designed to feel realistic, so you can practise in context.",
   },
   {
     icon: Target,
-    title: "Instant Feedback",
-    body: "Phil explains what nearly caught you the moment you take the bait.",
-  },
-  {
-    icon: BarChart3,
-    title: "Track Your Progress",
-    body: "Monthly reports show where you're improving and what to watch for next.",
+    title: "Instant Coaching",
+    body: "If you click, Phil steps in straight away with a calm debrief on what gave it away.",
   },
   {
     icon: Shield,
-    title: "Stronger Every Day",
-    body: "Build scam-spotting habits that stick, one safe lesson at a time.",
+    title: "Safety First",
+    body: "Training service only. We never collect real passwords, banking details, or sensitive form entries.",
+  },
+  {
+    icon: BarChart3,
+    title: "No Shame, Just Learning",
+    body: "Progress is there to help you improve habits over time, not to catch you out.",
   },
 ];
 
 const scamTypes = [
-  { icon: Package, title: "Delivery Scams", color: "bg-[#E8F4F8]" },
-  { icon: Building2, title: "Bank Impersonation", color: "bg-[#E8EEF8]" },
-  { icon: Gift, title: "Too Good To Be True", color: "bg-[#FFF0E8]" },
-  { icon: CreditCard, title: "Subscription Traps", color: "bg-[#F0E8F8]" },
+  { icon: Package, title: "NZ Post-Style Parcel Alerts", color: "bg-[#E8F4F8]" },
+  { icon: Building2, title: "Bank Security Alerts", color: "bg-[#E8EEF8]" },
+  { icon: Gift, title: "Trade Me & Marketplace Setups", color: "bg-[#FFF0E8]" },
+  { icon: CreditCard, title: "IRD Refund & Payment Traps", color: "bg-[#F0E8F8]" },
 ];
 
 const howSteps = [
@@ -67,11 +67,16 @@ export default function HomePage() {
         <div className="hero-inner">
           <div className="hero-copy">
             <h1>
-              We teach you to spot it, <span>before</span> it bites.
+              Get real scam emails safely — and learn how to spot them <span>before</span> it
+              matters.
             </h1>
             <p className="hero-lead">
-              Don&apos;t Bite sends realistic scam-awareness practice so you can learn, improve, and
-              outsmart scammers.
+              Don&apos;t Bite sends safe training emails to your inbox, so you can practise with
+              realistic phishing and scam scenarios before a real one lands.
+            </p>
+            <p className="text-sm md:text-base text-navy/70 mt-3 max-w-[42ch]">
+              Phil is your friendly coach throughout each drill, with instant guidance when you
+              need it.
             </p>
 
             <div className="hero-cta-block">
@@ -86,9 +91,9 @@ export default function HomePage() {
               </div>
 
               <div className="hero-trust" aria-label="Trust notes">
-                <span>Easy sign up</span>
-                <span>No personal data stored</span>
-                <span>Cancel anytime</span>
+                <span>No real passwords collected</span>
+                <span>No banking details collected</span>
+                <span>Safe training only</span>
               </div>
             </div>
           </div>
@@ -102,9 +107,9 @@ export default function HomePage() {
       {/* Build your immunity */}
       <section className="px-5 md:px-10 py-16 max-w-6xl mx-auto">
         <div className="text-center mb-10">
-          <p className="section-eyebrow mb-2">Build your immunity</p>
+          <p className="section-eyebrow mb-2">Safe, practical training</p>
           <h2 className="font-display text-4xl md:text-5xl font-black text-navy">
-            A safer way to learn the hard lessons.
+            Safe real-inbox scam drills with instant coaching.
           </h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -117,6 +122,38 @@ export default function HomePage() {
               <p className="text-muted text-sm leading-relaxed">{card.body}</p>
             </Card>
           ))}
+        </div>
+      </section>
+
+      {/* Reassurance */}
+      <section className="mx-5 md:mx-10 mb-16 max-w-6xl lg:mx-auto">
+        <div className="rounded-[2rem] bg-white border border-navy/10 px-5 md:px-8 py-8 md:py-10 shadow-[var(--shadow-soft)]">
+          <div className="text-center mb-7">
+            <p className="section-eyebrow mb-2">Reassurance</p>
+            <h2 className="font-display text-3xl md:text-4xl font-black text-navy">
+              Built to teach, not to trick.
+            </h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
+            {[
+              "No real passwords collected",
+              "No banking details collected",
+              "Safe training only",
+              "Instant debrief if you click",
+              "No shame, just learning",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl bg-blush/55 border border-navy/10 px-4 py-3 text-sm font-bold text-navy text-center"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-sm md:text-base text-navy/70 max-w-3xl mx-auto">
+            Training service only. We never collect real passwords, banking details, or sensitive
+            form entries.
+          </p>
         </div>
       </section>
 
@@ -152,7 +189,7 @@ export default function HomePage() {
           <p className="section-eyebrow mb-2">Simple process</p>
             <h2 className="font-display text-3xl md:text-4xl font-black text-white">How it works</h2>
             <p className="text-white/75 text-sm md:text-base mt-2">
-              Five quick steps. One safer brain.
+              Five quick steps with Phil guiding each one.
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
