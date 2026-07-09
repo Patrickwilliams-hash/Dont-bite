@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth/guards";
 
 export async function GET() {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const users = await db.user.findMany({
       orderBy: { createdAt: "desc" },
       select: {

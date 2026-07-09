@@ -47,7 +47,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/account/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: store.user.email, trainingActive: !trainingActive }),
+        body: JSON.stringify({ trainingActive: !trainingActive }),
       });
       const payload = (await res.json()) as {
         error?: string;

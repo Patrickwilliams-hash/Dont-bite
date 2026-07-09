@@ -1,29 +1,31 @@
 import { NextResponse } from "next/server";
 import { compare, hash } from "bcryptjs";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth/guards";
 
 interface ChangePasswordBody {
-  email?: string;
   currentPassword?: string;
   newPassword?: string;
 }
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     const body = (await req.json()) as ChangePasswordBody;
-    const email = body.email?.trim().toLowerCase() ?? "";
     const currentPassword = body.currentPassword ?? "";
     const newPassword = body.newPassword ?? "";
 
-    if (!email || !currentPassword || newPassword.length < 8) {
+    if (!currentPassword || newPassword.length < 8) {
       return NextResponse.json(
-        { error: "Email, current password and a new 8+ character password are required." },
+        { error: "Current password and a new 8+ character password are required." },
         { status: 400 }
       );
     }
 
     const user = await db.user.findUnique({
-      where: { email },
+      where: { id: auth.user.id },
       select: {
         id: true,
         name: true,

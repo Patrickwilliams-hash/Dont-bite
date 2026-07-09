@@ -1,27 +1,30 @@
 import { NextResponse } from "next/server";
 import { compare } from "bcryptjs";
 import { db } from "@/lib/db";
+import { clearSessionCookie, readSessionTokenFromCookie, revokeSession } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/guards";
 
 interface DeleteAccountBody {
-  email?: string;
   password?: string;
 }
 
 export async function POST(req: Request) {
   try {
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
+
     const body = (await req.json()) as DeleteAccountBody;
-    const email = body.email?.trim().toLowerCase() ?? "";
     const password = body.password ?? "";
 
-    if (!email || !password) {
+    if (!password) {
       return NextResponse.json(
-        { error: "Email and password are required to delete an account." },
+        { error: "Password is required to delete an account." },
         { status: 400 }
       );
     }
 
     const user = await db.user.findUnique({
-      where: { email },
+      where: { id: auth.user.id },
       select: { id: true, passwordHash: true },
     });
 
@@ -37,6 +40,11 @@ export async function POST(req: Request) {
 
     // Related records (e.g. password reset tokens) cascade via the schema.
     await db.user.delete({ where: { id: user.id } });
+    const sessionToken = await readSessionTokenFromCookie();
+    if (sessionToken) {
+      await revokeSession(sessionToken);
+    }
+    await clearSessionCookie();
 
     return NextResponse.json({ ok: true });
   } catch (error) {

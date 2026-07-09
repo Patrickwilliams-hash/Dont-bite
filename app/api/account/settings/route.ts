@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { DrillFrequency } from "@/lib/mock-store";
+import { requireUser } from "@/lib/auth/guards";
 
 interface SettingsBody {
-  email?: string;
   trainingActive?: boolean;
   frequency?: string;
 }
@@ -12,12 +12,10 @@ const ALLOWED_FREQUENCIES: DrillFrequency[] = ["weekly", "fortnightly", "monthly
 
 export async function PATCH(req: Request) {
   try {
-    const body = (await req.json()) as SettingsBody;
-    const email = body.email?.trim().toLowerCase() ?? "";
+    const auth = await requireUser();
+    if (!auth.ok) return auth.response;
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required." }, { status: 400 });
-    }
+    const body = (await req.json()) as SettingsBody;
 
     const data: { trainingActive?: boolean; frequency?: DrillFrequency } = {};
 
@@ -35,13 +33,8 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
     }
 
-    const existing = await db.user.findUnique({ where: { email }, select: { id: true, isActive: true } });
-    if (!existing || !existing.isActive) {
-      return NextResponse.json({ error: "Account not found." }, { status: 404 });
-    }
-
     const user = await db.user.update({
-      where: { id: existing.id },
+      where: { id: auth.user.id },
       data,
       select: {
         name: true,

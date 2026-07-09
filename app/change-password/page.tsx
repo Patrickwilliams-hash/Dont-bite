@@ -1,17 +1,13 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { setLocalUserSession, type DrillFrequency } from "@/lib/mock-store";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 function ChangePasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const defaultEmail = searchParams.get("email") ?? "";
-
-  const [email, setEmail] = useState(defaultEmail);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -36,7 +32,6 @@ function ChangePasswordForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim(),
           currentPassword,
           newPassword,
         }),
@@ -76,19 +71,6 @@ function ChangePasswordForm() {
 
       <Card>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-sm font-bold text-navy mb-1">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-navy/15 px-4 py-3 text-navy focus:outline-none focus:ring-2 focus:ring-orange/50"
-            />
-          </div>
           <div>
             <label htmlFor="currentPassword" className="block text-sm font-bold text-navy mb-1">
               Current password

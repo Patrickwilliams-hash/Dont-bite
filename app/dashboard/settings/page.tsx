@@ -53,7 +53,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/account/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, ...patch }),
+        body: JSON.stringify(patch),
       });
       const payload = (await res.json()) as {
         error?: string;
@@ -106,7 +106,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/account/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, password: deletePassword }),
+        body: JSON.stringify({ password: deletePassword }),
       });
       const payload = (await res.json()) as { error?: string; ok?: boolean };
       if (!res.ok || !payload.ok) {

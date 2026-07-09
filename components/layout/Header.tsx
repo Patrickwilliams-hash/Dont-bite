@@ -22,7 +22,12 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const { user } = useMockStore();
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Local logout still proceeds if network/server fails.
+    }
     logout();
     setOpen(false);
     router.push("/login");

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { compare, hash } from "bcryptjs";
+import { compare } from "bcryptjs";
+import { createSession, setSessionCookie } from "@/lib/auth/session";
 
 interface LoginBody {
   email?: string;
@@ -36,22 +37,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
-    let validPassword = false;
-    if (user.passwordHash && user.passwordHash.startsWith("$2")) {
-      validPassword = await compare(password, user.passwordHash);
-    } else {
-      // Legacy account (created before password hashing existed): adopt this login
-      // password as their new hash so they can continue normally.
-      const upgradedHash = await hash(password, 12);
-      await db.user.update({
-        where: { id: user.id },
-        data: {
-          passwordHash: upgradedHash,
-          passwordUpdatedAt: new Date(),
-        },
-      });
-      validPassword = true;
+    // Stage 1 hardening: only accept proper bcrypt hashes.
+    if (!user.passwordHash || !user.passwordHash.startsWith("$2")) {
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
+
+    const validPassword = await compare(password, user.passwordHash);
 
     if (!validPassword) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
@@ -61,6 +52,9 @@ export async function POST(req: Request) {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    const { token, session } = await createSession(user.id);
+    await setSessionCookie(token, session.expiresAt);
 
     return NextResponse.json({
       user: {
