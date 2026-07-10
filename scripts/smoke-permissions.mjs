@@ -309,7 +309,13 @@ async function main() {
     throw new Error("manage_users me access flags incorrect");
   }
   const meSuper = await (await fetch(`${base}/api/admin/me`, { headers: { cookie: superCookie } })).json();
-  if (!meSuper.access?.isSuperAdmin || !meSuper.access?.canManageUsers || !meSuper.access?.canManageAdmins || !meSuper.access?.canViewAuditLog) {
+  if (
+    !meSuper.access?.isSuperAdmin ||
+    !meSuper.access?.canManageUsers ||
+    !meSuper.access?.canManageAdmins ||
+    !meSuper.access?.canViewAuditLog ||
+    !meSuper.access?.canManageDrills
+  ) {
     throw new Error("super admin me access flags incorrect");
   }
   console.log("PASS: UI tab access flags match permissions via /api/admin/me");

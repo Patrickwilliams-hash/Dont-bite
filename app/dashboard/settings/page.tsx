@@ -40,6 +40,8 @@ export default function SettingsPage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testTrackPath, setTestTrackPath] = useState("");
 
   if (!store.user) return <ProtectedDashboardGate />;
   if (redirectingAdmin) {
@@ -95,6 +97,36 @@ export default function SettingsPage() {
     const ok = await saveSettings({ frequency });
     if (ok) setNotice("Training frequency updated.");
     setSavingFrequency(false);
+  }
+
+  async function sendTestDrill() {
+    setSendingTest(true);
+    setError("");
+    setNotice("");
+    setTestTrackPath("");
+    try {
+      const res = await fetch("/api/drills/test", { method: "POST" });
+      const payload = (await res.json()) as {
+        error?: string;
+        trackPath?: string;
+        preview?: { subject: string };
+      };
+      if (!res.ok || !payload.trackPath) {
+        setError(payload.error ?? "Could not create a test drill.");
+        return;
+      }
+      const absolute = `${window.location.origin}${payload.trackPath}`;
+      setTestTrackPath(absolute);
+      setNotice(
+        payload.preview?.subject
+          ? `Test drill ready: ${payload.preview.subject}`
+          : "Test drill ready. Open the track link to take the bait, or mark it spotted in History."
+      );
+    } catch {
+      setError("Could not create a test drill.");
+    } finally {
+      setSendingTest(false);
+    }
   }
 
   function closeDeleteModal() {
@@ -222,12 +254,21 @@ export default function SettingsPage() {
           <div>
             <p className="font-bold text-navy">Send me a test drill</p>
             <p className="text-sm text-navy/60 mt-0.5 max-w-md">
-              Trigger a one-off practice drill to see how training works. Available once the
-              drill delivery system launches.
+              Trigger a one-off practice drill now. You&apos;ll get a tracked lesson link so you
+              can try spotting or taking the bait safely.
             </p>
+            {testTrackPath && (
+              <p className="text-xs text-navy/50 mt-2 break-all font-mono">{testTrackPath}</p>
+            )}
           </div>
-          <Button variant="ghost" size="sm" disabled className="shrink-0">
-            Coming soon
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            disabled={sendingTest}
+            onClick={() => void sendTestDrill()}
+          >
+            {sendingTest ? "Sending…" : "Send test drill"}
           </Button>
         </div>
       </Card>

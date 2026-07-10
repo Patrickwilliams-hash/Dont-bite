@@ -27,6 +27,13 @@ enum AdminTier {
   administrator
 }
 
+enum DrillOutcome {
+  pending
+  caught
+  spotted
+  expired
+}
+
 model User {
   id           String         @id @default(cuid())
   name         String
@@ -47,6 +54,8 @@ model User {
   resetTokens  PasswordResetToken[]
   sessions     Session[]
   auditLogsAsActor AdminAuditLog[] @relation("AuditActor")
+  drillSends   DrillSend[]    @relation("UserDrillSends")
+  adminDrillSends DrillSend[] @relation("AdminDrillSends")
 }
 
 model AdminAuditLog {
@@ -91,4 +100,30 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model DrillSend {
+  id            String       @id @default(cuid())
+  userId        String
+  templateId    String
+  scamType      String
+  title         String
+  status        DrillOutcome @default(pending)
+  trackingToken String       @unique @default(cuid())
+  isTest        Boolean      @default(false)
+  sentByAdminId String?
+  sentAt        DateTime     @default(now())
+  clickedAt     DateTime?
+  spottedAt     DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation("UserDrillSends", fields: [userId], references: [id], onDelete: Cascade)
+  sentByAdmin   User?        @relation("AdminDrillSends", fields: [sentByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([userId, sentAt])
+  @@index([status])
+  @@index([sentAt])
+  @@index([templateId])
+  @@index([isTest])
 }

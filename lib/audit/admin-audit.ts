@@ -111,6 +111,14 @@ export function formatAuditSummary(input: {
       return `${input.actorName} signed out of admin.`;
     case "ADMIN_LOGIN_FAILED":
       return `Failed admin sign-in attempt${target}.`;
+    case "DRILL_SENT": {
+      const title =
+        input.metadata && typeof input.metadata.templateTitle === "string"
+          ? input.metadata.templateTitle
+          : "a drill";
+      const testLabel = input.metadata?.isTest ? "test " : "";
+      return `${input.actorName} sent ${testLabel}${title}${target}.`;
+    }
     default:
       return `${input.actorName} performed ${input.action.replaceAll("_", " ").toLowerCase()}${target}.`;
   }
