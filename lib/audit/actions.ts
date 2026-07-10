@@ -24,6 +24,12 @@ export const AUDIT_ACTIONS = {
   EMAIL_TEST_SENT: "EMAIL_TEST_SENT",
   PASSWORD_RESET_EMAIL_SENT: "PASSWORD_RESET_EMAIL_SENT",
   PASSWORD_RESET_COMPLETED: "PASSWORD_RESET_COMPLETED",
+  EMAIL_CHANGE_REQUESTED: "EMAIL_CHANGE_REQUESTED",
+  EMAIL_CHANGE_COMPLETED: "EMAIL_CHANGE_COMPLETED",
+  EMAIL_CHANGE_CANCELLED: "EMAIL_CHANGE_CANCELLED",
+  WELCOME_EMAIL_SENT: "WELCOME_EMAIL_SENT",
+  ADMIN_PASSWORD_RESET_EMAIL_SENT: "ADMIN_PASSWORD_RESET_EMAIL_SENT",
+  ADMIN_USER_EMAIL_CHANGED: "ADMIN_USER_EMAIL_CHANGED",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -54,10 +60,16 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   EMAIL_TEST_SENT: "Test email sent",
   PASSWORD_RESET_EMAIL_SENT: "Password reset email sent",
   PASSWORD_RESET_COMPLETED: "Password reset completed",
+  EMAIL_CHANGE_REQUESTED: "Email change requested",
+  EMAIL_CHANGE_COMPLETED: "Email change completed",
+  EMAIL_CHANGE_CANCELLED: "Email change cancelled",
+  WELCOME_EMAIL_SENT: "Welcome email sent",
+  ADMIN_PASSWORD_RESET_EMAIL_SENT: "Password reset email sent (admin)",
+  ADMIN_USER_EMAIL_CHANGED: "User email changed (admin)",
 };
 
 export const AUDIT_CATEGORIES = [
-  { id: "authentication", label: "Authentication", actions: ["ADMIN_LOGIN_SUCCESS", "ADMIN_LOGIN_FAILED", "ADMIN_LOGOUT", "PASSWORD_RESET_EMAIL_SENT", "PASSWORD_RESET_COMPLETED"] },
+  { id: "authentication", label: "Authentication", actions: ["ADMIN_LOGIN_SUCCESS", "ADMIN_LOGIN_FAILED", "ADMIN_LOGOUT", "PASSWORD_RESET_EMAIL_SENT", "PASSWORD_RESET_COMPLETED", "EMAIL_CHANGE_REQUESTED", "EMAIL_CHANGE_COMPLETED", "EMAIL_CHANGE_CANCELLED"] },
   {
     id: "administrators",
     label: "Administrators",
@@ -75,7 +87,7 @@ export const AUDIT_CATEGORIES = [
   {
     id: "users",
     label: "Users",
-    actions: ["USER_PASSWORD_RESET", "USER_DISABLED", "USER_REACTIVATED", "USER_DELETED"],
+    actions: ["USER_PASSWORD_RESET", "USER_DISABLED", "USER_REACTIVATED", "USER_DELETED", "WELCOME_EMAIL_SENT", "ADMIN_PASSWORD_RESET_EMAIL_SENT", "ADMIN_USER_EMAIL_CHANGED"],
   },
   {
     id: "platform",

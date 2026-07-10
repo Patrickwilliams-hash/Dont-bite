@@ -179,6 +179,13 @@ export function AdminControlCentre() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [userToChangeEmail, setUserToChangeEmail] = useState<AdminUser | null>(null);
+  const [changeEmailStep, setChangeEmailStep] = useState<"form" | "confirm">("form");
+  const [changeEmailNew, setChangeEmailNew] = useState("");
+  const [changeEmailConfirm, setChangeEmailConfirm] = useState("");
+  const [changeEmailReason, setChangeEmailReason] = useState("");
+  const [changeEmailBusy, setChangeEmailBusy] = useState(false);
+  const [sendingResetEmailId, setSendingResetEmailId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -357,14 +364,92 @@ export function AdminControlCentre() {
     }
   }
 
-  async function resetPassword(id: string) {
-    const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: "POST" });
-    const payload = (await res.json()) as { error?: string; tempPassword?: string };
-    if (!res.ok || !payload.tempPassword) {
-      setError(payload.error ?? "Failed to reset password.");
+  async function sendPasswordResetEmail(id: string) {
+    setSendingResetEmailId(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: "POST" });
+      const payload = (await res.json()) as { error?: string; message?: string; tempPassword?: string };
+      if (!res.ok || payload.tempPassword) {
+        setError(payload.error ?? "Failed to send password reset email.");
+        return;
+      }
+      setNotice(payload.message ?? "Password reset instructions have been sent to the user.");
+    } catch {
+      setError("Failed to send password reset email.");
+    } finally {
+      setSendingResetEmailId(null);
+    }
+  }
+
+  function openChangeEmailModal(user: AdminUser) {
+    setUserToChangeEmail(user);
+    setChangeEmailStep("form");
+    setChangeEmailNew("");
+    setChangeEmailConfirm("");
+    setChangeEmailReason("");
+    setChangeEmailBusy(false);
+  }
+
+  function closeChangeEmailModal() {
+    if (changeEmailBusy) return;
+    setUserToChangeEmail(null);
+    setChangeEmailStep("form");
+    setChangeEmailNew("");
+    setChangeEmailConfirm("");
+    setChangeEmailReason("");
+  }
+
+  function proceedChangeEmailConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (changeEmailNew.trim().toLowerCase() !== changeEmailConfirm.trim().toLowerCase()) {
+      setError("Email addresses do not match.");
       return;
     }
-    setNotice(`Temporary password: ${payload.tempPassword}`);
+    if (changeEmailReason.trim().length < 10) {
+      setError("Please provide a meaningful reason for this change (at least 10 characters).");
+      return;
+    }
+    setChangeEmailStep("confirm");
+  }
+
+  async function submitChangeEmail() {
+    if (!userToChangeEmail) return;
+    setChangeEmailBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/users/${userToChangeEmail.id}/change-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newEmail: changeEmailNew.trim(),
+          confirmEmail: changeEmailConfirm.trim(),
+          reason: changeEmailReason.trim(),
+        }),
+      });
+      const payload = (await res.json()) as {
+        error?: string;
+        message?: string;
+        notificationsSent?: boolean;
+      };
+      if (!res.ok) {
+        setError(payload.error ?? "Failed to change the account email address.");
+        setChangeEmailStep("form");
+        return;
+      }
+      setNotice(payload.message ?? "Account email address changed.");
+      if (selectedUser?.id === userToChangeEmail.id) {
+        setSelectedUser({ ...selectedUser, email: changeEmailNew.trim().toLowerCase() });
+      }
+      closeChangeEmailModal();
+      loadOverview(true);
+    } catch {
+      setError("Failed to change the account email address.");
+      setChangeEmailStep("form");
+    } finally {
+      setChangeEmailBusy(false);
+    }
   }
 
   const selectClass =
@@ -636,10 +721,20 @@ export function AdminControlCentre() {
                                 </button>
                                 <button
                                   type="button"
-                                  className="text-xs font-bold text-navy hover:text-coral-dark"
-                                  onClick={() => resetPassword(user.id)}
+                                  className="text-xs font-bold text-navy hover:text-coral-dark disabled:opacity-50"
+                                  disabled={sendingResetEmailId === user.id}
+                                  onClick={() => sendPasswordResetEmail(user.id)}
                                 >
-                                  Reset password
+                                  {sendingResetEmailId === user.id
+                                    ? "Sending…"
+                                    : "Send password reset email"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-bold text-navy hover:text-coral-dark"
+                                  onClick={() => openChangeEmailModal(user)}
+                                >
+                                  Change email
                                 </button>
                                 <button
                                   type="button"
@@ -772,9 +867,20 @@ export function AdminControlCentre() {
                 size="sm"
                 variant="ghost"
                 className="w-full !rounded-lg"
-                onClick={() => resetPassword(selectedUser.id)}
+                disabled={sendingResetEmailId === selectedUser.id}
+                onClick={() => sendPasswordResetEmail(selectedUser.id)}
               >
-                Reset password
+                {sendingResetEmailId === selectedUser.id
+                  ? "Sending…"
+                  : "Send password reset email"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full !rounded-lg"
+                onClick={() => openChangeEmailModal(selectedUser)}
+              >
+                Change email address
               </Button>
               <Button
                 size="sm"
@@ -794,6 +900,130 @@ export function AdminControlCentre() {
               </Button>
             </div>
           </aside>
+        </div>
+      )}
+
+      {userToChangeEmail && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-navy/40"
+            aria-label="Cancel email change"
+            onClick={() => !changeEmailBusy && closeChangeEmailModal()}
+          />
+          <div className="relative w-full max-w-md rounded-2xl bg-white border border-navy/10 shadow-2xl p-5">
+            {changeEmailStep === "form" ? (
+              <form onSubmit={proceedChangeEmailConfirm}>
+                <h3 className="font-display text-xl font-black text-navy mb-2">
+                  Change email address
+                </h3>
+                <p className="text-sm text-navy/70 mb-4">
+                  Change the login email for{" "}
+                  <strong className="text-navy">{userToChangeEmail.email}</strong>. This is a
+                  privileged support/recovery action.
+                </p>
+
+                <label htmlFor="admin-new-email" className="block text-sm font-bold text-navy mb-1">
+                  New email address
+                </label>
+                <input
+                  id="admin-new-email"
+                  type="email"
+                  required
+                  value={changeEmailNew}
+                  onChange={(e) => setChangeEmailNew(e.target.value)}
+                  className="w-full rounded-xl border border-navy/15 px-4 py-2.5 text-navy mb-3 focus:outline-none focus:ring-2 focus:ring-orange/40"
+                />
+
+                <label
+                  htmlFor="admin-confirm-email"
+                  className="block text-sm font-bold text-navy mb-1"
+                >
+                  Confirm new email address
+                </label>
+                <input
+                  id="admin-confirm-email"
+                  type="email"
+                  required
+                  value={changeEmailConfirm}
+                  onChange={(e) => setChangeEmailConfirm(e.target.value)}
+                  className="w-full rounded-xl border border-navy/15 px-4 py-2.5 text-navy mb-3 focus:outline-none focus:ring-2 focus:ring-orange/40"
+                />
+
+                <label htmlFor="admin-change-reason" className="block text-sm font-bold text-navy mb-1">
+                  Reason for change <span className="text-coral">*</span>
+                </label>
+                <textarea
+                  id="admin-change-reason"
+                  required
+                  rows={3}
+                  value={changeEmailReason}
+                  onChange={(e) => setChangeEmailReason(e.target.value)}
+                  placeholder="e.g. User entered wrong email at signup and cannot access the inbox"
+                  className="w-full rounded-xl border border-navy/15 px-4 py-2.5 text-navy mb-4 focus:outline-none focus:ring-2 focus:ring-orange/40 resize-none"
+                />
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    className="!rounded-lg"
+                    disabled={changeEmailBusy}
+                    onClick={closeChangeEmailModal}
+                  >
+                    Cancel
+                  </Button>
+                  <Button size="sm" type="submit" className="!rounded-lg" disabled={changeEmailBusy}>
+                    Continue
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                <h3 className="font-display text-xl font-black text-navy mb-2">
+                  Confirm email change
+                </h3>
+                <p className="text-sm text-navy/70 mb-4">
+                  This is a privileged account-recovery action. The user&apos;s login email will
+                  change immediately and all of their active sessions will be ended.
+                </p>
+                <dl className="text-sm mb-4 space-y-2 rounded-xl bg-navy/5 border border-navy/10 p-3">
+                  <div>
+                    <dt className="font-bold text-navy/55">Current email</dt>
+                    <dd className="text-navy">{userToChangeEmail.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold text-navy/55">New email</dt>
+                    <dd className="text-navy">{changeEmailNew.trim().toLowerCase()}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold text-navy/55">Reason</dt>
+                    <dd className="text-navy">{changeEmailReason.trim()}</dd>
+                  </div>
+                </dl>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="!rounded-lg"
+                    disabled={changeEmailBusy}
+                    onClick={() => setChangeEmailStep("form")}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="!rounded-lg"
+                    disabled={changeEmailBusy}
+                    onClick={submitChangeEmail}
+                  >
+                    {changeEmailBusy ? "Changing…" : "Change email address"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -117,6 +117,18 @@ export function formatAuditSummary(input: {
       return `${input.actorName} requested a password reset email.`;
     case "PASSWORD_RESET_COMPLETED":
       return `${input.actorName} completed a password reset.`;
+    case "EMAIL_CHANGE_REQUESTED":
+      return `${input.actorName} requested an account email change.`;
+    case "EMAIL_CHANGE_COMPLETED":
+      return `${input.actorName} changed their account email address.`;
+    case "EMAIL_CHANGE_CANCELLED":
+      return `${input.actorName} cancelled a pending email change.`;
+    case "WELCOME_EMAIL_SENT":
+      return `Welcome email sent${target}.`;
+    case "ADMIN_PASSWORD_RESET_EMAIL_SENT":
+      return `${input.actorName} sent a password reset email${target}.`;
+    case "ADMIN_USER_EMAIL_CHANGED":
+      return `${input.actorName} changed the account email address${target} (support recovery).`;
     default:
       return `${input.actorName} performed ${input.action.replaceAll("_", " ").toLowerCase()}${target}.`;
   }

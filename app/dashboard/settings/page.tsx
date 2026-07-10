@@ -7,6 +7,7 @@ import { useMockStore } from "@/lib/use-mock-store";
 import { logout, updateLocalUser, type DrillFrequency } from "@/lib/mock-store";
 import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { useRedirectAdminFromDashboard } from "@/components/dashboard/useRedirectAdminFromDashboard";
+import { ChangeEmailModal } from "@/components/dashboard/ChangeEmailModal";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle, ArrowLeft, KeyRound, Mail, Settings, User } from "lucide-react";
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
@@ -244,14 +246,24 @@ export default function SettingsPage() {
               <dd className="text-navy font-bold">{user.name}</dd>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Mail className="w-4 h-4 text-navy/40 shrink-0" />
-            <div>
-              <dt className="text-xs font-extrabold uppercase tracking-wide text-navy/50">
-                Email address
-              </dt>
-              <dd className="text-navy font-bold">{user.email}</dd>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Mail className="w-4 h-4 text-navy/40 shrink-0" />
+              <div>
+                <dt className="text-xs font-extrabold uppercase tracking-wide text-navy/50">
+                  Email address
+                </dt>
+                <dd className="text-navy font-bold">{user.email}</dd>
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setShowEmailModal(true)}
+            >
+              Change Email
+            </Button>
           </div>
           <div className="flex items-center gap-3">
             <KeyRound className="w-4 h-4 text-navy/40 shrink-0" />
@@ -305,6 +317,9 @@ export default function SettingsPage() {
           </Button>
         </div>
       </Card>
+
+      {/* Change email modal */}
+      {showEmailModal && <ChangeEmailModal onClose={() => setShowEmailModal(false)} />}
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (

@@ -12,6 +12,8 @@ export interface SystemEmailContent {
   preheader: string;
   heading: string;
   bodyParagraphs: string[];
+  /** Short verification code displayed prominently between paragraphs and the action. */
+  highlightCode?: string;
   primaryAction?: SystemEmailAction;
   secondaryText?: string;
   footerNote?: string;
@@ -66,6 +68,10 @@ function buildPlainText(content: SystemEmailContent): string {
     ...content.bodyParagraphs,
   ];
 
+  if (content.highlightCode) {
+    lines.push("", `Your verification code: ${content.highlightCode}`);
+  }
+
   if (content.primaryAction) {
     lines.push("", `${content.primaryAction.label}: ${content.primaryAction.url}`);
   }
@@ -95,6 +101,18 @@ function buildHtml(content: SystemEmailContent): string {
     .join("");
 
   const philUrl = absolutePhilImageUrl();
+  const codeHtml = content.highlightCode
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
+        <tr>
+          <td align="center" style="background-color: ${BRAND.cream}; border: 1px solid ${BRAND.border}; border-radius: 14px; padding: 18px 12px;">
+            <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 700; letter-spacing: 0.35em; color: ${BRAND.navy};">
+              ${escapeHtml(content.highlightCode)}
+            </p>
+          </td>
+        </tr>
+      </table>`
+    : "";
+
   const actionHtml = content.primaryAction
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
         <tr>
@@ -155,6 +173,7 @@ function buildHtml(content: SystemEmailContent): string {
                         ${heading}
                       </h1>
                       ${bodyHtml}
+                      ${codeHtml}
                       ${actionHtml}
                       ${secondaryHtml}
                     </td>
