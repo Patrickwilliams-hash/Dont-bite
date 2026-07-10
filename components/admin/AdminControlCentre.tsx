@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { AdministratorsPanel } from "@/components/admin/AdministratorsPanel";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { ActivityLogPanel } from "@/components/admin/ActivityLogPanel";
+import { TestEmailPanel } from "@/components/admin/TestEmailPanel";
 
 interface AdminUser {
   id: string;
@@ -46,6 +47,7 @@ interface AdminAccess {
   canManageUsers: boolean;
   canManageAdmins: boolean;
   canViewAuditLog: boolean;
+  canSendTestEmail: boolean;
 }
 
 type AdminTab = "overview" | "users" | "administrators" | "activity" | "drills" | "templates" | "content";
@@ -167,6 +169,7 @@ export function AdminControlCentre() {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [access, setAccess] = useState<AdminAccess | null>(null);
   const [accessLoaded, setAccessLoaded] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -188,10 +191,16 @@ export function AdminControlCentre() {
           setAccessLoaded(true);
           return;
         }
-        const payload = (await res.json()) as { access?: AdminAccess };
+        const payload = (await res.json()) as {
+          access?: AdminAccess;
+          administrator?: { email: string };
+        };
         if (payload.access) {
           setAccess(payload.access);
           setActiveTab(firstAccessibleTab(payload.access));
+        }
+        if (payload.administrator?.email) {
+          setAdminEmail(payload.administrator.email);
         }
       } catch {
         // Tabs stay hidden if profile cannot be loaded.
@@ -365,6 +374,7 @@ export function AdminControlCentre() {
   const canManageAdmins = access?.canManageAdmins ?? false;
   const canViewAuditLog = access?.canViewAuditLog ?? false;
   const isSuperAdmin = access?.isSuperAdmin ?? false;
+  const canSendTestEmail = access?.canSendTestEmail ?? false;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-8">
@@ -471,7 +481,15 @@ export function AdminControlCentre() {
           )}
 
           {activeTab === "overview" && (
-            <div className="grid lg:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {canSendTestEmail && (
+                <TestEmailPanel
+                  defaultRecipient={adminEmail}
+                  onNotice={setNotice}
+                  onError={setError}
+                />
+              )}
+              <div className="grid lg:grid-cols-2 gap-4">
               {canManageUsers && (
                 <Card className="!p-4">
                   <h2 className="font-bold text-navy mb-3 flex items-center gap-2">
@@ -515,6 +533,7 @@ export function AdminControlCentre() {
                   ))}
                 </ul>
               </Card>
+              </div>
             </div>
           )}
 

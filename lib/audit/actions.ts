@@ -21,6 +21,7 @@ export const AUDIT_ACTIONS = {
   CONTENT_UPDATED: "CONTENT_UPDATED",
   CONTENT_DELETED: "CONTENT_DELETED",
   PLATFORM_SETTING_CHANGED: "PLATFORM_SETTING_CHANGED",
+  EMAIL_TEST_SENT: "EMAIL_TEST_SENT",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -48,6 +49,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   CONTENT_UPDATED: "Content updated",
   CONTENT_DELETED: "Content deleted",
   PLATFORM_SETTING_CHANGED: "Platform setting changed",
+  EMAIL_TEST_SENT: "Test email sent",
 };
 
 export const AUDIT_CATEGORIES = [
@@ -74,7 +76,7 @@ export const AUDIT_CATEGORIES = [
   {
     id: "platform",
     label: "Platform",
-    actions: ["DRILL_CREATED", "DRILL_UPDATED", "DRILL_SENT", "CONTENT_CREATED", "CONTENT_UPDATED", "CONTENT_DELETED", "PLATFORM_SETTING_CHANGED"],
+    actions: ["DRILL_CREATED", "DRILL_UPDATED", "DRILL_SENT", "CONTENT_CREATED", "CONTENT_UPDATED", "CONTENT_DELETED", "PLATFORM_SETTING_CHANGED", "EMAIL_TEST_SENT"],
   },
 ] as const;
 

@@ -63,5 +63,6 @@ export function getAdminAccessFlags(user: Pick<SessionUser, "adminTier" | "admin
     canManageUsers: hasAdminPermission(user, "manage_users"),
     canManageAdmins: hasAdminPermission(user, "manage_admins"),
     canViewAuditLog: hasAdminPermission(user, "view_audit_log"),
+    canSendTestEmail: superAdmin,
   };
 }

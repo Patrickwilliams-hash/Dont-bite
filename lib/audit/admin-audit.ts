@@ -111,6 +111,8 @@ export function formatAuditSummary(input: {
       return `${input.actorName} signed out of admin.`;
     case "ADMIN_LOGIN_FAILED":
       return `Failed admin sign-in attempt${target}.`;
+    case "EMAIL_TEST_SENT":
+      return `${input.actorName} sent a test email${target}.`;
     default:
       return `${input.actorName} performed ${input.action.replaceAll("_", " ").toLowerCase()}${target}.`;
   }
