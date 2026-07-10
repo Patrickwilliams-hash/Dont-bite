@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useMockStore } from "@/lib/use-mock-store";
 import { logout, updateLocalUser, type DrillFrequency } from "@/lib/mock-store";
 import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
+import { useRedirectAdminFromDashboard } from "@/components/dashboard/useRedirectAdminFromDashboard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle, ArrowLeft, KeyRound, Mail, Settings, User } from "lucide-react";
@@ -27,6 +28,7 @@ function formatJoined(value: string) {
 export default function SettingsPage() {
   const store = useMockStore();
   const router = useRouter();
+  const redirectingAdmin = useRedirectAdminFromDashboard();
 
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingFrequency, setSavingFrequency] = useState(false);
@@ -40,6 +42,13 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
 
   if (!store.user) return <ProtectedDashboardGate />;
+  if (redirectingAdmin) {
+    return (
+      <div className="max-w-3xl mx-auto px-5 py-16 text-center text-navy/60">
+        Redirecting to admin…
+      </div>
+    );
+  }
 
   const user = store.user;
 

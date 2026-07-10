@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { setLocalUserSession, type DrillFrequency } from "@/lib/mock-store";
+import { resolvePostLoginPath } from "@/lib/auth/redirects";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -34,6 +37,7 @@ export default function LoginPage() {
           frequency: DrillFrequency;
           joinedAt: string;
           trainingActive: boolean;
+          role?: "user" | "admin";
         };
         mustChangePassword?: boolean;
       };
@@ -48,7 +52,7 @@ export default function LoginPage() {
         router.push(`/change-password?email=${encodeURIComponent(payload.user.email)}`);
         return;
       }
-      router.push("/dashboard");
+      router.push(resolvePostLoginPath(payload.user.role ?? "user", next));
     } catch {
       setError("Could not log in. Please try again.");
     } finally {
@@ -114,5 +118,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="max-w-lg mx-auto px-5 py-16 text-center text-navy/60">Loading…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

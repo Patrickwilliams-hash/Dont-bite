@@ -28,6 +28,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             frequency: DrillFrequency;
             joinedAt: string;
             trainingActive: boolean;
+            role?: "user" | "admin";
           };
         };
         if (payload.user) {

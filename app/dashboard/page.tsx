@@ -7,6 +7,7 @@ import { useMockStore } from "@/lib/use-mock-store";
 import { updateLocalUser } from "@/lib/mock-store";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
+import { useRedirectAdminFromDashboard } from "@/components/dashboard/useRedirectAdminFromDashboard";
 import { Button } from "@/components/ui/Button";
 import { StatCard, Card } from "@/components/ui/Card";
 import { BookOpen, History, Settings, ShieldCheck, Sprout } from "lucide-react";
@@ -21,9 +22,17 @@ const TrendChart = dynamic(
 
 export default function DashboardPage() {
   const store = useMockStore();
+  const redirectingAdmin = useRedirectAdminFromDashboard();
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState("");
   if (!store.user) return <ProtectedDashboardGate />;
+  if (redirectingAdmin) {
+    return (
+      <div className="max-w-3xl mx-auto px-5 py-16 text-center text-navy/60">
+        Redirecting to admin…
+      </div>
+    );
+  }
 
   const firstName = store.user.name.split(" ")[0];
   const trainingActive = store.user.trainingActive;

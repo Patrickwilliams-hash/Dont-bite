@@ -7,12 +7,15 @@ export type ScamType =
   | "invoice"
   | "romance";
 
+export type UserRole = "user" | "admin";
+
 export interface User {
   name: string;
   email: string;
   frequency: DrillFrequency;
   joinedAt: string;
   trainingActive: boolean;
+  role?: UserRole;
 }
 
 export interface Stats {

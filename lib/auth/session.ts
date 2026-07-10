@@ -61,6 +61,16 @@ export async function revokeSession(rawToken: string) {
   });
 }
 
+export async function revokeAllUserSessions(userId: string) {
+  await db.session.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+    },
+    data: { revokedAt: new Date() },
+  });
+}
+
 export async function validateSessionToken(rawToken: string) {
   const tokenHash = hashSessionToken(rawToken);
   const now = new Date();

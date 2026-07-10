@@ -3,14 +3,14 @@ import { db } from "@/lib/db";
 import { authenticateWithPassword, serializeSessionUser } from "@/lib/auth/login";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 
-interface LoginBody {
+interface AdminLoginBody {
   email?: string;
   password?: string;
 }
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as LoginBody;
+    const body = (await req.json()) as AdminLoginBody;
     const email = body.email?.trim().toLowerCase() ?? "";
     const password = body.password ?? "";
 
@@ -21,6 +21,13 @@ export async function POST(req: Request) {
     const auth = await authenticateWithPassword(email, password);
     if (!auth.ok) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    }
+
+    if (auth.user.role !== "admin") {
+      return NextResponse.json(
+        { error: "This account does not have admin access." },
+        { status: 403 }
+      );
     }
 
     await db.user.update({
@@ -36,7 +43,7 @@ export async function POST(req: Request) {
       mustChangePassword: auth.user.mustChangePassword,
     });
   } catch (error) {
-    console.error("Login lookup error", error);
+    console.error("Admin login error", error);
     return NextResponse.json({ error: "Failed to log in." }, { status: 500 });
   }
 }

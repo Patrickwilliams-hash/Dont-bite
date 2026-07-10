@@ -7,6 +7,7 @@ import { useMockStore } from "@/lib/use-mock-store";
 import { getWeakestScamType } from "@/lib/mock-store";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
+import { useRedirectAdminFromDashboard } from "@/components/dashboard/useRedirectAdminFromDashboard";
 import { StatCard, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Share2, Check } from "lucide-react";
@@ -37,9 +38,17 @@ const tipsByType: Record<string, string> = {
 
 export default function ReportPage() {
   const store = useMockStore();
+  const redirectingAdmin = useRedirectAdminFromDashboard();
   const [copied, setCopied] = useState(false);
   const weakest = getWeakestScamType(store);
   if (!store.user) return <ProtectedDashboardGate />;
+  if (redirectingAdmin) {
+    return (
+      <div className="max-w-3xl mx-auto px-5 py-16 text-center text-navy/60">
+        Redirecting to admin…
+      </div>
+    );
+  }
 
   const month = new Date().toLocaleDateString("en-NZ", { month: "long", year: "numeric" });
   const completedDrills = store.stats.spotted + store.stats.caught;

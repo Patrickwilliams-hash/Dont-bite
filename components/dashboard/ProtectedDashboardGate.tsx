@@ -1,10 +1,14 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
 export function ProtectedDashboardGate() {
+  const pathname = usePathname();
+  const loginHref = `/login?next=${encodeURIComponent(pathname)}`;
+
   return (
     <div className="max-w-3xl mx-auto px-5 md:px-10 py-16">
       <Card className="text-center border-navy/10 bg-white/90">
@@ -19,7 +23,7 @@ export function ProtectedDashboardGate() {
           you&apos;re new to Don&apos;t Bite.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Button href="/login" size="sm">
+          <Button href={loginHref} size="sm">
             Log In
           </Button>
           <Button href="/signup" size="sm" variant="ghost">
