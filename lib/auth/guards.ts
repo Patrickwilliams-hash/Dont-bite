@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { readSessionTokenFromCookie, validateSessionToken, type SessionUser } from "@/lib/auth/session";
+import {
+  hasAdminPermission,
+  isSuperAdmin,
+  type AdminPermissionKey,
+} from "@/lib/auth/admin-permissions";
 
 export type AuthGuardResult =
   | { ok: true; user: SessionUser; sessionId: string }
@@ -24,6 +29,32 @@ export async function requireAdmin(): Promise<AuthGuardResult> {
   if (!auth.ok) return auth;
   if (auth.user.role !== "admin") {
     return { ok: false, response: NextResponse.json({ error: "Admin access required." }, { status: 403 }) };
+  }
+  return auth;
+}
+
+export async function requireAdminPermission(
+  permission: AdminPermissionKey
+): Promise<AuthGuardResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+  if (!hasAdminPermission(auth.user, permission)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Insufficient administrator permissions." }, { status: 403 }),
+    };
+  }
+  return auth;
+}
+
+export async function requireSuperAdmin(): Promise<AuthGuardResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth;
+  if (!isSuperAdmin(auth.user)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Super Admin access required." }, { status: 403 }),
+    };
   }
   return auth;
 }

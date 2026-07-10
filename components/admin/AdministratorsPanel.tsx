@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { Badge, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
+import { ADMIN_PERMISSION_KEYS, ADMIN_PERMISSION_LABELS, adminTierLabel } from "@/lib/auth/admin-permissions";
+
 export interface AdministratorRecord {
   id: string;
   name: string;
   email: string;
   role: "admin";
+  adminTier: "super_admin" | "administrator" | null;
+  adminPermissions: string[];
   isActive: boolean;
   joinedAt: string;
   createdAt: string;
@@ -22,7 +26,7 @@ interface TrainingUserOption {
 }
 
 interface AdministratorsPanelProps {
-  trainingUsers: TrainingUserOption[];
+  isSuperAdmin: boolean;
   onNotice: (message: string) => void;
   onError: (message: string) => void;
   onChanged?: () => void;
@@ -48,7 +52,7 @@ function formatDate(value: string) {
 }
 
 export function AdministratorsPanel({
-  trainingUsers,
+  isSuperAdmin,
   onNotice,
   onError,
   onChanged,
@@ -58,7 +62,10 @@ export function AdministratorsPanel({
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [promoteUserId, setPromoteUserId] = useState("");
+  const [promoteQuery, setPromoteQuery] = useState("");
+  const [promoteResults, setPromoteResults] = useState<TrainingUserOption[]>([]);
+  const [promoteSearching, setPromoteSearching] = useState(false);
+  const [promoteSearchError, setPromoteSearchError] = useState("");
   const [promoting, setPromoting] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     admin: AdministratorRecord;
@@ -66,6 +73,9 @@ export function AdministratorsPanel({
   } | null>(null);
   const [confirmPromoteUser, setConfirmPromoteUser] = useState<TrainingUserOption | null>(null);
   const [acting, setActing] = useState(false);
+  const [permissionsEditor, setPermissionsEditor] = useState<AdministratorRecord | null>(null);
+  const [editedPermissions, setEditedPermissions] = useState<string[]>([]);
+  const [editedTier, setEditedTier] = useState<"super_admin" | "administrator">("administrator");
 
   async function loadAdministrators() {
     setLoading(true);
@@ -92,6 +102,41 @@ export function AdministratorsPanel({
     void loadAdministrators();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const query = promoteQuery.trim();
+    if (query.length < 2) {
+      setPromoteResults([]);
+      setPromoteSearchError("");
+      setPromoteSearching(false);
+      return;
+    }
+
+    setPromoteSearching(true);
+    setPromoteSearchError("");
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(query)}`);
+        const payload = (await res.json()) as {
+          error?: string;
+          users?: TrainingUserOption[];
+        };
+        if (!res.ok) {
+          setPromoteSearchError(payload.error ?? "Could not search training users.");
+          setPromoteResults([]);
+          return;
+        }
+        setPromoteResults(payload.users ?? []);
+      } catch {
+        setPromoteSearchError("Could not search training users.");
+        setPromoteResults([]);
+      } finally {
+        setPromoteSearching(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [promoteQuery]);
 
   async function createAdministrator(e: React.FormEvent) {
     e.preventDefault();
@@ -143,7 +188,8 @@ export function AdministratorsPanel({
         return;
       }
       onNotice(`${user.email} is now an administrator and will no longer be treated as a training user.`);
-      setPromoteUserId("");
+      setPromoteQuery("");
+      setPromoteResults([]);
       setConfirmPromoteUser(null);
       await loadAdministrators();
       onChanged?.();
@@ -195,7 +241,38 @@ export function AdministratorsPanel({
     }
   }
 
-  const selectedPromoteUser = trainingUsers.find((user) => user.id === promoteUserId) ?? null;
+  async function saveAdministratorAccess(admin: AdministratorRecord) {
+    setActing(true);
+    onError("");
+    onNotice("");
+    try {
+      const res = await fetch(`/api/admin/administrators/${admin.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminTier: editedTier,
+          permissions: editedPermissions,
+        }),
+      });
+      const payload = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        onError(payload.error ?? "Failed to update administrator access.");
+        return;
+      }
+      onNotice(`Updated access for ${admin.email}.`);
+      setPermissionsEditor(null);
+      await loadAdministrators();
+      onChanged?.();
+    } catch {
+      onError("Failed to update administrator access.");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  function canManageAdministratorRow(admin: AdministratorRecord): boolean {
+    return isSuperAdmin || admin.adminTier !== "super_admin";
+  }
 
   return (
     <div className="space-y-4">
@@ -238,33 +315,55 @@ export function AdministratorsPanel({
 
       <Card className="!p-4">
         <h2 className="font-bold text-lg text-navy mb-3">Promote training user</h2>
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
-          <div className="flex-1">
-            <label htmlFor="promote-user" className="block text-xs font-bold text-navy/60 mb-1">
-              Select user
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="promote-search" className="block text-xs font-bold text-navy/60 mb-1">
+              Search by name or email
             </label>
-            <select
-              id="promote-user"
-              value={promoteUserId}
-              onChange={(e) => setPromoteUserId(e.target.value)}
+            <input
+              id="promote-search"
+              type="search"
+              value={promoteQuery}
+              onChange={(e) => setPromoteQuery(e.target.value)}
+              placeholder="Type at least 2 characters…"
               className="w-full rounded-lg border border-navy/15 px-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-orange/40"
-            >
-              <option value="">Choose a training user…</option>
-              {trainingUsers.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
-                </option>
-              ))}
-            </select>
+            />
           </div>
-          <Button
-            size="sm"
-            className="!rounded-lg"
-            disabled={!selectedPromoteUser || promoting}
-            onClick={() => selectedPromoteUser && setConfirmPromoteUser(selectedPromoteUser)}
-          >
-            Promote to administrator
-          </Button>
+          {promoteQuery.trim().length > 0 && promoteQuery.trim().length < 2 && (
+            <p className="text-sm text-navy/55">Enter at least 2 characters to search.</p>
+          )}
+          {promoteSearching && (
+            <p className="text-sm text-navy/60">Searching training users…</p>
+          )}
+          {promoteSearchError && (
+            <p className="text-sm font-bold text-coral">{promoteSearchError}</p>
+          )}
+          {!promoteSearching && promoteQuery.trim().length >= 2 && promoteResults.length === 0 && !promoteSearchError && (
+            <p className="text-sm text-navy/55">No matching training users found.</p>
+          )}
+          {promoteResults.length > 0 && (
+            <ul className="space-y-2">
+              {promoteResults.map((user) => (
+                <li
+                  key={user.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-navy/10 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-bold text-navy">{user.name}</p>
+                    <p className="text-xs text-navy/60">{user.email}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="!rounded-lg"
+                    disabled={promoting}
+                    onClick={() => setConfirmPromoteUser(user)}
+                  >
+                    Promote
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </Card>
 
@@ -279,6 +378,7 @@ export function AdministratorsPanel({
                 <tr className="border-b border-navy/10 text-left text-navy/60">
                   <th className="py-2 pr-3 font-bold">Name</th>
                   <th className="py-2 pr-3 font-bold">Email</th>
+                  <th className="py-2 pr-3 font-bold">Type</th>
                   <th className="py-2 pr-3 font-bold">Status</th>
                   <th className="py-2 pr-3 font-bold">Joined</th>
                   <th className="py-2 pr-3 font-bold">Last login</th>
@@ -291,6 +391,7 @@ export function AdministratorsPanel({
                   <tr key={admin.id} className="border-b border-navy/5 hover:bg-blush/20">
                     <td className="py-2.5 pr-3 font-bold text-navy">{admin.name}</td>
                     <td className="py-2.5 pr-3 text-navy/80">{admin.email}</td>
+                    <td className="py-2.5 pr-3 text-navy/75">{adminTierLabel(admin.adminTier)}</td>
                     <td className="py-2.5 pr-3">
                       <Badge variant={admin.isActive ? "success" : "warning"}>
                         {admin.isActive ? "Active" : "Disabled"}
@@ -305,14 +406,29 @@ export function AdministratorsPanel({
                     <td className="py-2.5 pr-3 text-navy/75 capitalize">{admin.role}</td>
                     <td className="py-2.5 pr-0">
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="text-xs font-bold text-navy hover:text-coral-dark"
-                          onClick={() => setConfirmAction({ admin, action: "demote" })}
-                        >
-                          Remove admin rights
-                        </button>
-                        {admin.isActive ? (
+                        {canManageAdministratorRow(admin) && (
+                          <button
+                            type="button"
+                            className="text-xs font-bold text-navy hover:text-coral-dark"
+                            onClick={() => {
+                              setPermissionsEditor(admin);
+                              setEditedPermissions(admin.adminPermissions);
+                              setEditedTier(admin.adminTier ?? "administrator");
+                            }}
+                          >
+                            Edit access
+                          </button>
+                        )}
+                        {canManageAdministratorRow(admin) && (
+                          <button
+                            type="button"
+                            className="text-xs font-bold text-navy hover:text-coral-dark"
+                            onClick={() => setConfirmAction({ admin, action: "demote" })}
+                          >
+                            Remove admin rights
+                          </button>
+                        )}
+                        {canManageAdministratorRow(admin) && admin.isActive ? (
                           <button
                             type="button"
                             className="text-xs font-bold text-coral hover:text-coral-dark"
@@ -320,7 +436,7 @@ export function AdministratorsPanel({
                           >
                             Disable
                           </button>
-                        ) : (
+                        ) : canManageAdministratorRow(admin) ? (
                           <button
                             type="button"
                             className="text-xs font-bold text-navy hover:text-coral-dark"
@@ -328,6 +444,8 @@ export function AdministratorsPanel({
                           >
                             Reactivate
                           </button>
+                        ) : (
+                          <span className="text-xs text-navy/45">Super Admin only</span>
                         )}
                       </div>
                     </td>
@@ -341,6 +459,76 @@ export function AdministratorsPanel({
           </div>
         )}
       </Card>
+
+      {permissionsEditor && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-navy/40"
+            aria-label="Cancel access edit"
+            onClick={() => !acting && setPermissionsEditor(null)}
+          />
+          <div className="relative w-full max-w-md rounded-2xl bg-white border border-navy/10 shadow-2xl p-5">
+            <h3 className="font-display text-xl font-black text-navy mb-2">
+              Edit administrator access
+            </h3>
+            <p className="text-sm text-navy/70 mb-4">{permissionsEditor.email}</p>
+            <label className="block text-xs font-bold text-navy/60 mb-1">Administrator type</label>
+            {isSuperAdmin ? (
+              <select
+                value={editedTier}
+                onChange={(e) => setEditedTier(e.target.value as "super_admin" | "administrator")}
+                className="w-full rounded-lg border border-navy/15 px-3 py-2 text-sm text-navy mb-4"
+              >
+                <option value="administrator">Administrator</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            ) : (
+              <p className="text-sm text-navy mb-4">Administrator</p>
+            )}
+            <p className="text-xs font-extrabold uppercase tracking-wide text-navy/45 mb-2">
+              Permissions
+            </p>
+            <div className="space-y-2 mb-4">
+              {ADMIN_PERMISSION_KEYS.map((permission) => (
+                <label key={permission} className="flex items-center gap-2 text-sm text-navy">
+                  <input
+                    type="checkbox"
+                    checked={editedPermissions.includes(permission)}
+                    onChange={(e) => {
+                      setEditedPermissions((current) =>
+                        e.target.checked
+                          ? [...current, permission]
+                          : current.filter((item) => item !== permission)
+                      );
+                    }}
+                  />
+                  {ADMIN_PERMISSION_LABELS[permission]}
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="!rounded-lg"
+                disabled={acting}
+                onClick={() => setPermissionsEditor(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="!rounded-lg"
+                disabled={acting}
+                onClick={() => saveAdministratorAccess(permissionsEditor)}
+              >
+                {acting ? "Saving…" : "Save access"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmPromoteUser && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

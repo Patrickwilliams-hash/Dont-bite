@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import type { UserRole } from "@prisma/client";
+import type { UserRole, AdminTier } from "@prisma/client";
 
 export const SESSION_COOKIE_NAME = "dontbite_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 14; // 14 days
@@ -11,6 +11,8 @@ export interface SessionUser {
   name: string;
   email: string;
   role: UserRole;
+  adminTier: AdminTier | null;
+  adminPermissions: string[];
   isActive: boolean;
   frequency: "weekly" | "fortnightly" | "monthly";
   joinedAt: Date;
@@ -90,6 +92,8 @@ export async function validateSessionToken(rawToken: string) {
           name: true,
           email: true,
           role: true,
+          adminTier: true,
+          adminPermissions: true,
           isActive: true,
           frequency: true,
           joinedAt: true,

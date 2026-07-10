@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   BookOpen,
+  ClipboardList,
   LayoutDashboard,
   Mail,
   Search,
@@ -16,6 +17,8 @@ import {
 import { Card, Badge } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AdministratorsPanel } from "@/components/admin/AdministratorsPanel";
+import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
+import { ActivityLogPanel } from "@/components/admin/ActivityLogPanel";
 
 interface AdminUser {
   id: string;
@@ -38,7 +41,14 @@ interface AdminStats {
   usersLoggedIn: number;
 }
 
-type AdminTab = "overview" | "users" | "administrators" | "drills" | "templates" | "content";
+interface AdminAccess {
+  isSuperAdmin: boolean;
+  canManageUsers: boolean;
+  canManageAdmins: boolean;
+  canViewAuditLog: boolean;
+}
+
+type AdminTab = "overview" | "users" | "administrators" | "activity" | "drills" | "templates" | "content";
 type StatusFilter = "all" | "active" | "disabled";
 type FrequencyFilter = "all" | "weekly" | "fortnightly" | "monthly";
 type SortKey = "joined-desc" | "joined-asc" | "login-desc" | "login-asc" | "name-asc";
@@ -54,6 +64,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: typeof LayoutDashboard; e
   { id: "overview", label: "Overview", icon: LayoutDashboard, enabled: true },
   { id: "users", label: "Users", icon: Users, enabled: true },
   { id: "administrators", label: "Administrators", icon: ShieldCheck, enabled: true },
+  { id: "activity", label: "Activity Log", icon: ClipboardList, enabled: true },
   { id: "drills", label: "Drills", icon: Target, enabled: false },
   { id: "templates", label: "Templates", icon: Mail, enabled: false },
   { id: "content", label: "Content", icon: BookOpen, enabled: false },
@@ -121,14 +132,41 @@ function AdminKpiCard({
   );
 }
 
+function isTabAccessible(tab: AdminTab, access: AdminAccess): boolean {
+  switch (tab) {
+    case "overview":
+    case "drills":
+    case "templates":
+    case "content":
+      return true;
+    case "users":
+      return access.canManageUsers;
+    case "administrators":
+      return access.canManageAdmins;
+    case "activity":
+      return access.canViewAuditLog;
+    default:
+      return false;
+  }
+}
+
+function firstAccessibleTab(access: AdminAccess): AdminTab {
+  for (const tab of ADMIN_TABS) {
+    if (tab.enabled && isTabAccessible(tab.id, access)) return tab.id;
+  }
+  return "overview";
+}
+
 export function AdminControlCentre() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [userDataLoading, setUserDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+  const [access, setAccess] = useState<AdminAccess | null>(null);
+  const [accessLoaded, setAccessLoaded] = useState(false);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -139,34 +177,74 @@ export function AdminControlCentre() {
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAdminAccess() {
+      try {
+        const res = await fetch("/api/admin/me");
+        if (!mounted) return;
+        if (!res.ok) {
+          setAccessLoaded(true);
+          return;
+        }
+        const payload = (await res.json()) as { access?: AdminAccess };
+        if (payload.access) {
+          setAccess(payload.access);
+          setActiveTab(firstAccessibleTab(payload.access));
+        }
+      } catch {
+        // Tabs stay hidden if profile cannot be loaded.
+      } finally {
+        if (mounted) setAccessLoaded(true);
+      }
+    }
+
+    loadAdminAccess();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   async function loadOverview(isRefresh = false) {
+    if (!access?.canManageUsers) return;
+
     if (isRefresh) setRefreshing(true);
-    else setInitialLoading(true);
+    else setUserDataLoading(true);
     setError("");
     try {
       const res = await fetch("/api/admin/overview");
       const payload = (await res.json()) as {
         error?: string;
+        canViewUserData?: boolean;
         users?: AdminUser[];
         stats?: AdminStats;
       };
-      if (!res.ok || !payload.users || !payload.stats) {
-        setError(payload.error ?? "Could not load admin data.");
+      if (!res.ok) {
+        setError(payload.error ?? "Could not load user data.");
+        return;
+      }
+      if (!payload.canViewUserData || !payload.users || !payload.stats) {
+        setUsers([]);
+        setStats(null);
         return;
       }
       setUsers(payload.users);
       setStats(payload.stats);
     } catch {
-      setError("Could not load admin data.");
+      setError("Could not load user data.");
     } finally {
-      setInitialLoading(false);
+      setUserDataLoading(false);
       setRefreshing(false);
     }
   }
 
   useEffect(() => {
-    loadOverview();
-  }, []);
+    if (access?.canManageUsers) {
+      void loadOverview();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access?.canManageUsers]);
 
   const newThisWeek = useMemo(
     () => users.filter((user) => isWithinDays(user.joinedAt, 7)).length,
@@ -283,6 +361,11 @@ export function AdminControlCentre() {
   const selectClass =
     "rounded-lg border border-navy/15 bg-white px-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-orange/40";
 
+  const canManageUsers = access?.canManageUsers ?? false;
+  const canManageAdmins = access?.canManageAdmins ?? false;
+  const canViewAuditLog = access?.canViewAuditLog ?? false;
+  const isSuperAdmin = access?.isSuperAdmin ?? false;
+
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-8">
 
@@ -296,37 +379,49 @@ export function AdminControlCentre() {
             Early operations dashboard for accounts and platform readiness.
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => loadOverview(true)}
-          disabled={refreshing}
-          className="!rounded-lg self-start md:self-auto"
-        >
-          {refreshing ? "Refreshing…" : "Refresh data"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center self-start md:self-auto">
+          {canManageUsers && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => loadOverview(true)}
+              disabled={refreshing}
+              className="!rounded-lg"
+            >
+              {refreshing ? "Refreshing…" : "Refresh data"}
+            </Button>
+          )}
+          <AdminAccountMenu />
+        </div>
       </div>
 
       <nav className="flex flex-wrap gap-2 mb-5" aria-label="Admin sections">
         {ADMIN_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const tabAccessible = accessLoaded && access && isTabAccessible(tab.id, access);
+          const tabEnabled = tab.enabled && tabAccessible;
           return (
             <button
               key={tab.id}
               type="button"
-              disabled={!tab.enabled}
-              onClick={() => tab.enabled && setActiveTab(tab.id)}
+              disabled={!tabEnabled}
+              onClick={() => tabEnabled && setActiveTab(tab.id)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
                 isActive
                   ? "bg-navy text-white"
-                  : tab.enabled
+                  : tabEnabled
                     ? "bg-white/80 border border-navy/10 text-navy hover:bg-blush/40"
                     : "bg-navy/5 border border-navy/5 text-navy/35 cursor-not-allowed"
               }`}
             >
               <Icon size={15} />
               {tab.label}
+              {!tabEnabled && tab.enabled && accessLoaded && (
+                <span className="text-[0.65rem] uppercase tracking-wide opacity-70">
+                  No access
+                </span>
+              )}
               {!tab.enabled && (
                 <span className="text-[0.65rem] uppercase tracking-wide opacity-70">Soon</span>
               )}
@@ -346,13 +441,13 @@ export function AdminControlCentre() {
         </p>
       )}
 
-      {initialLoading ? (
+      {!accessLoaded ? (
         <Card className="!p-4">
-          <p className="text-sm text-navy/60">Loading admin data…</p>
+          <p className="text-sm text-navy/60">Loading admin access…</p>
         </Card>
       ) : (
         <>
-          {(activeTab === "overview" || activeTab === "users") && stats && (
+          {canManageUsers && (activeTab === "overview" || activeTab === "users") && stats && (
             <section className="mb-5">
               <h2 className="text-sm font-extrabold text-navy mb-2">Key metrics</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-2">
@@ -377,28 +472,32 @@ export function AdminControlCentre() {
 
           {activeTab === "overview" && (
             <div className="grid lg:grid-cols-2 gap-4">
-              <Card className="!p-4">
-                <h2 className="font-bold text-navy mb-3 flex items-center gap-2">
-                  <BarChart3 size={16} /> Recent activity
-                </h2>
-                {recentActivity.length > 0 ? (
-                  <ul className="space-y-2.5">
-                    {recentActivity.map((item) => (
-                      <li key={item.id} className="text-sm border-b border-navy/5 pb-2 last:border-0">
-                        <p className="font-bold text-navy">{item.label}</p>
-                        <p className="text-navy/65">{item.detail}</p>
-                        <p className="text-xs text-navy/45 mt-0.5">{formatDateTime(item.at)}</p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-navy/60 leading-relaxed">
-                    Recent activity will appear here once drill and account events are recorded.
-                  </p>
-                )}
-              </Card>
+              {canManageUsers && (
+                <Card className="!p-4">
+                  <h2 className="font-bold text-navy mb-3 flex items-center gap-2">
+                    <BarChart3 size={16} /> Recent activity
+                  </h2>
+                  {userDataLoading ? (
+                    <p className="text-sm text-navy/60">Loading user activity…</p>
+                  ) : recentActivity.length > 0 ? (
+                    <ul className="space-y-2.5">
+                      {recentActivity.map((item) => (
+                        <li key={item.id} className="text-sm border-b border-navy/5 pb-2 last:border-0">
+                          <p className="font-bold text-navy">{item.label}</p>
+                          <p className="text-navy/65">{item.detail}</p>
+                          <p className="text-xs text-navy/45 mt-0.5">{formatDateTime(item.at)}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-navy/60 leading-relaxed">
+                      Recent activity will appear here once drill and account events are recorded.
+                    </p>
+                  )}
+                </Card>
+              )}
 
-              <Card className="!p-4">
+              <Card className={`!p-4 ${canManageUsers ? "" : "lg:col-span-2"}`}>
                 <h2 className="font-bold text-navy mb-3 flex items-center gap-2">
                   <Shield size={16} /> Next admin features
                 </h2>
@@ -419,142 +518,148 @@ export function AdminControlCentre() {
             </div>
           )}
 
-          {activeTab === "users" && (
+          {activeTab === "users" && canManageUsers && (
             <Card className="!p-4 overflow-hidden">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-                <h2 className="font-bold text-lg text-navy">Registered users</h2>
-                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                  <div className="relative">
-                    <Search
-                      size={15}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40"
-                    />
-                    <input
-                      type="search"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search name or email"
-                      className="w-full sm:w-56 rounded-lg border border-navy/15 pl-9 pr-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-orange/40"
-                    />
+              {userDataLoading ? (
+                <p className="text-sm text-navy/60">Loading users…</p>
+              ) : (
+                <>
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                    <h2 className="font-bold text-lg text-navy">Registered users</h2>
+                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                      <div className="relative">
+                        <Search
+                          size={15}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-navy/40"
+                        />
+                        <input
+                          type="search"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Search name or email"
+                          className="w-full sm:w-56 rounded-lg border border-navy/15 pl-9 pr-3 py-2 text-sm text-navy focus:outline-none focus:ring-2 focus:ring-orange/40"
+                        />
+                      </div>
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                        className={selectClass}
+                        aria-label="Filter by status"
+                      >
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                      <select
+                        value={frequencyFilter}
+                        onChange={(e) => setFrequencyFilter(e.target.value as FrequencyFilter)}
+                        className={selectClass}
+                        aria-label="Filter by drill frequency"
+                      >
+                        <option value="all">All frequencies</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="fortnightly">Fortnightly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                      <select
+                        value={sortKey}
+                        onChange={(e) => setSortKey(e.target.value as SortKey)}
+                        className={selectClass}
+                        aria-label="Sort users"
+                      >
+                        <option value="joined-desc">Joined (newest)</option>
+                        <option value="joined-asc">Joined (oldest)</option>
+                        <option value="login-desc">Last login (recent)</option>
+                        <option value="login-asc">Last login (oldest)</option>
+                        <option value="name-asc">Name (A–Z)</option>
+                      </select>
+                    </div>
                   </div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                    className={selectClass}
-                    aria-label="Filter by status"
-                  >
-                    <option value="all">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="disabled">Disabled</option>
-                  </select>
-                  <select
-                    value={frequencyFilter}
-                    onChange={(e) => setFrequencyFilter(e.target.value as FrequencyFilter)}
-                    className={selectClass}
-                    aria-label="Filter by drill frequency"
-                  >
-                    <option value="all">All frequencies</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="fortnightly">Fortnightly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                  <select
-                    value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value as SortKey)}
-                    className={selectClass}
-                    aria-label="Sort users"
-                  >
-                    <option value="joined-desc">Joined (newest)</option>
-                    <option value="joined-asc">Joined (oldest)</option>
-                    <option value="login-desc">Last login (recent)</option>
-                    <option value="login-asc">Last login (oldest)</option>
-                    <option value="name-asc">Name (A–Z)</option>
-                  </select>
-                </div>
-              </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-sm">
-                  <thead>
-                    <tr className="border-b border-navy/10 text-left text-navy/60">
-                      <th className="py-2 pr-3 font-bold">Name</th>
-                      <th className="py-2 pr-3 font-bold">Email</th>
-                      <th className="py-2 pr-3 font-bold">Frequency</th>
-                      <th className="py-2 pr-3 font-bold">Status</th>
-                      <th className="py-2 pr-3 font-bold">Last login</th>
-                      <th className="py-2 pr-3 font-bold">Joined</th>
-                      <th className="py-2 pr-0 font-bold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="border-b border-navy/5 hover:bg-blush/20">
-                        <td className="py-2.5 pr-3 font-bold text-navy">{user.name}</td>
-                        <td className="py-2.5 pr-3 text-navy/80">{user.email}</td>
-                        <td className="py-2.5 pr-3 text-navy/75 capitalize">{user.frequency}</td>
-                        <td className="py-2.5 pr-3">
-                          <Badge variant={user.isActive ? "success" : "warning"}>
-                            {user.isActive ? "Active" : "Disabled"}
-                          </Badge>
-                        </td>
-                        <td className="py-2.5 pr-3 text-navy/70 whitespace-nowrap">
-                          {formatDateTime(user.lastLoginAt)}
-                        </td>
-                        <td className="py-2.5 pr-3 text-navy/70 whitespace-nowrap">
-                          {formatDate(user.joinedAt)}
-                        </td>
-                        <td className="py-2.5 pr-0">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              className="text-xs font-bold text-navy hover:text-coral-dark"
-                              onClick={() => setSelectedUser(user)}
-                            >
-                              View
-                            </button>
-                            <button
-                              type="button"
-                              className="text-xs font-bold text-navy hover:text-coral-dark"
-                              onClick={() => resetPassword(user.id)}
-                            >
-                              Reset password
-                            </button>
-                            <button
-                              type="button"
-                              className="text-xs font-bold text-coral hover:text-coral-dark"
-                              onClick={() => setUserToDelete(user)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px] text-sm">
+                      <thead>
+                        <tr className="border-b border-navy/10 text-left text-navy/60">
+                          <th className="py-2 pr-3 font-bold">Name</th>
+                          <th className="py-2 pr-3 font-bold">Email</th>
+                          <th className="py-2 pr-3 font-bold">Frequency</th>
+                          <th className="py-2 pr-3 font-bold">Status</th>
+                          <th className="py-2 pr-3 font-bold">Last login</th>
+                          <th className="py-2 pr-3 font-bold">Joined</th>
+                          <th className="py-2 pr-0 font-bold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.map((user) => (
+                          <tr key={user.id} className="border-b border-navy/5 hover:bg-blush/20">
+                            <td className="py-2.5 pr-3 font-bold text-navy">{user.name}</td>
+                            <td className="py-2.5 pr-3 text-navy/80">{user.email}</td>
+                            <td className="py-2.5 pr-3 text-navy/75 capitalize">{user.frequency}</td>
+                            <td className="py-2.5 pr-3">
+                              <Badge variant={user.isActive ? "success" : "warning"}>
+                                {user.isActive ? "Active" : "Disabled"}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 pr-3 text-navy/70 whitespace-nowrap">
+                              {formatDateTime(user.lastLoginAt)}
+                            </td>
+                            <td className="py-2.5 pr-3 text-navy/70 whitespace-nowrap">
+                              {formatDate(user.joinedAt)}
+                            </td>
+                            <td className="py-2.5 pr-0">
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className="text-xs font-bold text-navy hover:text-coral-dark"
+                                  onClick={() => setSelectedUser(user)}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-bold text-navy hover:text-coral-dark"
+                                  onClick={() => resetPassword(user.id)}
+                                >
+                                  Reset password
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-bold text-coral hover:text-coral-dark"
+                                  onClick={() => setUserToDelete(user)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-              {filteredUsers.length === 0 && (
-                <p className="text-center text-navy/50 py-8 text-sm">
-                  {users.length === 0
-                    ? "No registrations yet."
-                    : "No users match your current filters."}
-                </p>
+                  {filteredUsers.length === 0 && (
+                    <p className="text-center text-navy/50 py-8 text-sm">
+                      {users.length === 0
+                        ? "No registrations yet."
+                        : "No users match your current filters."}
+                    </p>
+                  )}
+                </>
               )}
             </Card>
           )}
 
-          {activeTab === "administrators" && (
+          {activeTab === "administrators" && canManageAdmins && (
             <AdministratorsPanel
-              trainingUsers={users.map((user) => ({
-                id: user.id,
-                name: user.name,
-                email: user.email,
-              }))}
+              isSuperAdmin={isSuperAdmin}
               onNotice={setNotice}
               onError={setError}
               onChanged={() => loadOverview(true)}
             />
+          )}
+
+          {activeTab === "activity" && canViewAuditLog && (
+            <ActivityLogPanel onError={setError} />
           )}
 
           {(activeTab === "drills" || activeTab === "templates" || activeTab === "content") && (
