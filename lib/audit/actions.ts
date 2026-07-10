@@ -22,6 +22,8 @@ export const AUDIT_ACTIONS = {
   CONTENT_DELETED: "CONTENT_DELETED",
   PLATFORM_SETTING_CHANGED: "PLATFORM_SETTING_CHANGED",
   EMAIL_TEST_SENT: "EMAIL_TEST_SENT",
+  PASSWORD_RESET_EMAIL_SENT: "PASSWORD_RESET_EMAIL_SENT",
+  PASSWORD_RESET_COMPLETED: "PASSWORD_RESET_COMPLETED",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -50,10 +52,12 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   CONTENT_DELETED: "Content deleted",
   PLATFORM_SETTING_CHANGED: "Platform setting changed",
   EMAIL_TEST_SENT: "Test email sent",
+  PASSWORD_RESET_EMAIL_SENT: "Password reset email sent",
+  PASSWORD_RESET_COMPLETED: "Password reset completed",
 };
 
 export const AUDIT_CATEGORIES = [
-  { id: "authentication", label: "Authentication", actions: ["ADMIN_LOGIN_SUCCESS", "ADMIN_LOGIN_FAILED", "ADMIN_LOGOUT"] },
+  { id: "authentication", label: "Authentication", actions: ["ADMIN_LOGIN_SUCCESS", "ADMIN_LOGIN_FAILED", "ADMIN_LOGOUT", "PASSWORD_RESET_EMAIL_SENT", "PASSWORD_RESET_COMPLETED"] },
   {
     id: "administrators",
     label: "Administrators",

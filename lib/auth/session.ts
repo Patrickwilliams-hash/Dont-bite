@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import type { UserRole, AdminTier } from "@prisma/client";
+import type { Prisma, UserRole, AdminTier } from "@prisma/client";
 
 export const SESSION_COOKIE_NAME = "dontbite_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 14; // 14 days
@@ -63,8 +63,11 @@ export async function revokeSession(rawToken: string) {
   });
 }
 
-export async function revokeAllUserSessions(userId: string) {
-  await db.session.updateMany({
+export async function revokeAllUserSessions(
+  userId: string,
+  tx: Prisma.TransactionClient = db
+) {
+  await tx.session.updateMany({
     where: {
       userId,
       revokedAt: null,

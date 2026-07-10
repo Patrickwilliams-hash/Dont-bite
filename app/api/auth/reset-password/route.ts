@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import crypto from "node:crypto";
 import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
+import { hashPasswordResetToken } from "@/lib/auth/password-reset";
+import { revokeAllUserSessions } from "@/lib/auth/session";
+import { getAuditRequestContext, recordAdminAuditLog } from "@/lib/audit/admin-audit";
+import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 
 interface ResetPasswordBody {
   token?: string;
@@ -9,6 +12,8 @@ interface ResetPasswordBody {
 }
 
 export async function POST(req: Request) {
+  const auditContext = getAuditRequestContext(req);
+
   try {
     const body = (await req.json()) as ResetPasswordBody;
     const token = body.token ?? "";
@@ -21,7 +26,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const tokenHash = hashPasswordResetToken(token);
     const resetToken = await db.passwordResetToken.findUnique({
       where: { tokenHash },
       select: { id: true, userId: true, expiresAt: true, usedAt: true },
@@ -32,19 +37,54 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await hash(newPassword, 12);
-    await db.user.update({
-      where: { id: resetToken.userId },
-      data: {
-        passwordHash,
-        mustChangePassword: false,
-        passwordUpdatedAt: new Date(),
-      },
+
+    await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: resetToken.userId },
+        data: {
+          passwordHash,
+          mustChangePassword: false,
+          passwordUpdatedAt: new Date(),
+        },
+      });
+
+      await tx.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      });
+
+      await tx.passwordResetToken.updateMany({
+        where: {
+          userId: resetToken.userId,
+          usedAt: null,
+          id: { not: resetToken.id },
+        },
+        data: { usedAt: new Date() },
+      });
+
+      await revokeAllUserSessions(resetToken.userId, tx);
     });
 
-    await db.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: new Date() },
+    const user = await db.user.findUnique({
+      where: { id: resetToken.userId },
+      select: { id: true, email: true },
     });
+
+    if (user) {
+      try {
+        await recordAdminAuditLog({
+          actorUserId: user.id,
+          action: AUDIT_ACTIONS.PASSWORD_RESET_COMPLETED,
+          targetType: "user",
+          targetId: user.id,
+          targetLabel: user.email,
+          metadata: { channel: "self_service" },
+          context: auditContext,
+        });
+      } catch (auditError) {
+        console.error("Password reset completion audit log failed", auditError);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

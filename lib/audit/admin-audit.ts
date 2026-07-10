@@ -113,6 +113,10 @@ export function formatAuditSummary(input: {
       return `Failed admin sign-in attempt${target}.`;
     case "EMAIL_TEST_SENT":
       return `${input.actorName} sent a test email${target}.`;
+    case "PASSWORD_RESET_EMAIL_SENT":
+      return `${input.actorName} requested a password reset email.`;
+    case "PASSWORD_RESET_COMPLETED":
+      return `${input.actorName} completed a password reset.`;
     default:
       return `${input.actorName} performed ${input.action.replaceAll("_", " ").toLowerCase()}${target}.`;
   }
