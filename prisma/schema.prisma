@@ -27,6 +27,20 @@ enum AdminTier {
   administrator
 }
 
+enum DrillDeliveryStatus {
+  queued
+  sending
+  sent
+  failed
+  cancelled
+}
+
+enum DrillOutcome {
+  pending
+  caught
+  no_interaction
+}
+
 model User {
   id           String         @id @default(cuid())
   name         String
@@ -48,6 +62,70 @@ model User {
   sessions     Session[]
   auditLogsAsActor AdminAuditLog[] @relation("AuditActor")
   emailChangeRequests EmailChangeRequest[]
+  drillDeliveriesReceived DrillDelivery[] @relation("DrillRecipient")
+  drillDeliveriesTriggered DrillDelivery[] @relation("DrillTriggered")
+  drillTemplatesCreated DrillTemplate[] @relation("DrillTemplateCreator")
+}
+
+model DrillTemplate {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  title            String
+  scamType         String
+  brandName        String
+  fakeDomain       String
+  realDomainHint   String
+  redFlags         Json
+  whyDangerous     String   @db.Text
+  howToSpot        Json
+  learnSlug        String
+  emailSubject     String?
+  emailPreviewText String?
+  emailBodyHtml    String?  @db.Text
+  emailBodyText    String?  @db.Text
+  isActive         Boolean  @default(true)
+  createdByUserId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdBy        User?    @relation("DrillTemplateCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  deliveries       DrillDelivery[]
+}
+
+model DrillDelivery {
+  id                String              @id @default(cuid())
+  userId            String
+  templateId        String
+  trackingTokenHash String              @unique
+  status            DrillDeliveryStatus
+  outcome           DrillOutcome        @default(pending)
+  sentAt            DateTime?
+  caughtAt          DateTime?
+  expiresAt         DateTime
+  sendErrorCode     String?
+  triggeredByUserId String?
+  createdAt         DateTime            @default(now())
+  user              User                @relation("DrillRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  template          DrillTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  triggeredBy       User?               @relation("DrillTriggered", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+  events            DrillEvent[]
+
+  @@index([userId, createdAt])
+  @@index([templateId, createdAt])
+  @@index([status, createdAt])
+  @@index([outcome, expiresAt])
+}
+
+model DrillEvent {
+  id         String   @id @default(cuid())
+  deliveryId String
+  eventType  String
+  ipHash     String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  delivery   DrillDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId])
+  @@index([deliveryId, eventType])
 }
 
 model AdminAuditLog {
