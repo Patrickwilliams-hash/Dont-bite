@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMockStore } from "@/lib/use-mock-store";
 import { getWeakestScamType } from "@/lib/mock-store";
+import { useTrainingStats } from "@/components/dashboard/useTrainingStats";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { useRedirectAdminFromDashboard } from "@/components/dashboard/useRedirectAdminFromDashboard";
@@ -38,9 +39,10 @@ const tipsByType: Record<string, string> = {
 
 export default function ReportPage() {
   const store = useMockStore();
+  const { stats, loading: statsLoading } = useTrainingStats();
   const redirectingAdmin = useRedirectAdminFromDashboard();
   const [copied, setCopied] = useState(false);
-  const weakest = getWeakestScamType(store);
+  const weakest = getWeakestScamType({ user: store.user, stats });
   if (!store.user) return <ProtectedDashboardGate />;
   if (redirectingAdmin) {
     return (
@@ -51,14 +53,14 @@ export default function ReportPage() {
   }
 
   const month = new Date().toLocaleDateString("en-NZ", { month: "long", year: "numeric" });
-  const completedDrills = store.stats.spotted + store.stats.caught;
+  const completedDrills = stats.spotted + stats.caught;
   const spotRate =
-    completedDrills > 0 ? `${Math.round((store.stats.spotted / completedDrills) * 100)}%` : "—";
-  const hasTrainingHistory = store.stats.monthlyTrend.length > 0;
+    completedDrills > 0 ? `${Math.round((stats.spotted / completedDrills) * 100)}%` : "—";
+  const hasTrainingHistory = stats.monthlyTrend.length > 0;
 
   function handleShare() {
     const text = `My Don't Bite Report (${month}):
-Drills: ${store.stats.drillsSent} | Spotted: ${store.stats.spotted} | Caught: ${store.stats.caught}
+Drills: ${stats.drillsSent} | Spotted: ${stats.spotted} | Caught: ${stats.caught}
 Spot rate: ${spotRate}
 Don't take the bait.`;
     navigator.clipboard.writeText(text);
@@ -85,17 +87,17 @@ Don't take the bait.`;
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Drills sent" value={store.stats.drillsSent} />
-        <StatCard label="Scams spotted" value={store.stats.spotted} />
-        <StatCard label="Times caught" value={store.stats.caught} />
-        <StatCard label="Spot rate" value={spotRate} />
+        <StatCard label="Drills sent" value={statsLoading ? "…" : stats.drillsSent} />
+        <StatCard label="Scams spotted" value={statsLoading ? "…" : stats.spotted} />
+        <StatCard label="Times caught" value={statsLoading ? "…" : stats.caught} />
+        <StatCard label="Spot rate" value={statsLoading ? "…" : spotRate} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <Card>
           <h2 className="font-bold text-navy mb-4">Monthly activity</h2>
           {hasTrainingHistory ? (
-            <ReportBarChart data={store.stats.monthlyTrend} />
+            <ReportBarChart data={stats.monthlyTrend} />
           ) : (
             <div className="h-[200px] flex items-center justify-center text-navy/50 text-sm text-center px-6">
               Once you&apos;ve completed a few drills, your activity will appear here.
@@ -104,7 +106,7 @@ Don't take the bait.`;
         </Card>
         <Card>
           <h2 className="font-bold text-navy mb-4">Where scams caught you</h2>
-          <ScamTypeChart data={store.stats.byScamType} />
+          <ScamTypeChart data={stats.byScamType} />
         </Card>
       </div>
 

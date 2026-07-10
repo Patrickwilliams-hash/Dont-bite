@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMockStore } from "@/lib/use-mock-store";
 import { updateLocalUser } from "@/lib/mock-store";
+import { useTrainingStats } from "@/components/dashboard/useTrainingStats";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { useRedirectAdminFromDashboard } from "@/components/dashboard/useRedirectAdminFromDashboard";
@@ -22,6 +23,7 @@ const TrendChart = dynamic(
 
 export default function DashboardPage() {
   const store = useMockStore();
+  const { stats, loading: statsLoading } = useTrainingStats();
   const redirectingAdmin = useRedirectAdminFromDashboard();
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState("");
@@ -37,10 +39,10 @@ export default function DashboardPage() {
   const firstName = store.user.name.split(" ")[0];
   const trainingActive = store.user.trainingActive;
 
-  const completedDrills = store.stats.spotted + store.stats.caught;
+  const completedDrills = stats.spotted + stats.caught;
   const spotRate =
-    completedDrills > 0 ? `${Math.round((store.stats.spotted / completedDrills) * 100)}%` : "—";
-  const hasTrainingHistory = store.stats.monthlyTrend.length > 0;
+    completedDrills > 0 ? `${Math.round((stats.spotted / completedDrills) * 100)}%` : "—";
+  const hasTrainingHistory = stats.monthlyTrend.length > 0;
 
   async function toggleTraining() {
     if (!store.user) return;
@@ -105,7 +107,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* How the real thing works */}
       <Card className="mb-8 bg-blush/70 border-navy/10">
         <div className="flex items-start gap-4">
           <div className="w-11 h-11 rounded-xl bg-navy/10 flex items-center justify-center shrink-0">
@@ -123,16 +124,20 @@ export default function DashboardPage() {
       </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Drills sent" value={store.stats.drillsSent} />
-        <StatCard label="Scams spotted" value={store.stats.spotted} />
-        <StatCard label="Times caught" value={store.stats.caught} />
-        <StatCard label="Spot rate" value={spotRate} sub="of completed drills spotted" />
+        <StatCard label="Drills sent" value={statsLoading ? "…" : stats.drillsSent} />
+        <StatCard label="Scams spotted" value={statsLoading ? "…" : stats.spotted} />
+        <StatCard label="Times caught" value={statsLoading ? "…" : stats.caught} />
+        <StatCard
+          label="Spot rate"
+          value={statsLoading ? "…" : spotRate}
+          sub="of completed drills spotted"
+        />
       </div>
 
       <Card className="mb-8">
         <h2 className="font-bold text-navy mb-4">Your progress</h2>
         {hasTrainingHistory ? (
-          <TrendChart data={store.stats.monthlyTrend} />
+          <TrendChart data={stats.monthlyTrend} />
         ) : (
           <div className="h-[220px] flex flex-col items-center justify-center text-center gap-2 rounded-xl bg-blush/40 border border-navy/5 px-6">
             <Sprout className="w-8 h-8 text-orange" />

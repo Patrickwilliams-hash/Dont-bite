@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { AdministratorsPanel } from "@/components/admin/AdministratorsPanel";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { ActivityLogPanel } from "@/components/admin/ActivityLogPanel";
+import { DrillsPanel } from "@/components/admin/DrillsPanel";
 
 interface AdminUser {
   id: string;
@@ -41,11 +42,21 @@ interface AdminStats {
   usersLoggedIn: number;
 }
 
+interface DrillKpis {
+  drillsSent: number;
+  bites: number;
+  spotted: number;
+  pending: number;
+  spotRate: number | null;
+}
+
 interface AdminAccess {
   isSuperAdmin: boolean;
   canManageUsers: boolean;
   canManageAdmins: boolean;
   canViewAuditLog: boolean;
+  canManageDrills: boolean;
+  canManageContent: boolean;
 }
 
 type AdminTab = "overview" | "users" | "administrators" | "activity" | "drills" | "templates" | "content";
@@ -65,16 +76,14 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: typeof LayoutDashboard; e
   { id: "users", label: "Users", icon: Users, enabled: true },
   { id: "administrators", label: "Administrators", icon: ShieldCheck, enabled: true },
   { id: "activity", label: "Activity Log", icon: ClipboardList, enabled: true },
-  { id: "drills", label: "Drills", icon: Target, enabled: false },
+  { id: "drills", label: "Drills", icon: Target, enabled: true },
   { id: "templates", label: "Templates", icon: Mail, enabled: false },
   { id: "content", label: "Content", icon: BookOpen, enabled: false },
 ];
 
 const COMING_SOON_FEATURES = [
-  "Create scam drills",
   "Manage email templates",
-  "Send test campaigns",
-  "View drill results",
+  "Schedule live campaigns",
   "Manage educational content",
 ];
 
@@ -135,10 +144,12 @@ function AdminKpiCard({
 function isTabAccessible(tab: AdminTab, access: AdminAccess): boolean {
   switch (tab) {
     case "overview":
-    case "drills":
     case "templates":
-    case "content":
       return true;
+    case "content":
+      return access.canManageContent;
+    case "drills":
+      return access.canManageDrills;
     case "users":
       return access.canManageUsers;
     case "administrators":
@@ -160,6 +171,7 @@ function firstAccessibleTab(access: AdminAccess): AdminTab {
 export function AdminControlCentre() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [drillKpis, setDrillKpis] = useState<DrillKpis | null>(null);
   const [userDataLoading, setUserDataLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -207,32 +219,43 @@ export function AdminControlCentre() {
   }, []);
 
   async function loadOverview(isRefresh = false) {
-    if (!access?.canManageUsers) return;
+    if (!access?.canManageUsers && !access?.canManageDrills) return;
 
     if (isRefresh) setRefreshing(true);
-    else setUserDataLoading(true);
+    else if (access?.canManageUsers) setUserDataLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/overview");
-      const payload = (await res.json()) as {
-        error?: string;
-        canViewUserData?: boolean;
-        users?: AdminUser[];
-        stats?: AdminStats;
-      };
-      if (!res.ok) {
-        setError(payload.error ?? "Could not load user data.");
-        return;
+      if (access?.canManageUsers) {
+        const res = await fetch("/api/admin/overview");
+        const payload = (await res.json()) as {
+          error?: string;
+          canViewUserData?: boolean;
+          users?: AdminUser[];
+          stats?: AdminStats;
+        };
+        if (!res.ok) {
+          setError(payload.error ?? "Could not load user data.");
+        } else if (!payload.canViewUserData || !payload.users || !payload.stats) {
+          setUsers([]);
+          setStats(null);
+        } else {
+          setUsers(payload.users);
+          setStats(payload.stats);
+        }
       }
-      if (!payload.canViewUserData || !payload.users || !payload.stats) {
-        setUsers([]);
-        setStats(null);
-        return;
+
+      if (access?.canManageDrills) {
+        const drillRes = await fetch("/api/admin/drills/stats");
+        const drillPayload = (await drillRes.json()) as {
+          error?: string;
+          stats?: DrillKpis;
+        };
+        if (drillRes.ok && drillPayload.stats) {
+          setDrillKpis(drillPayload.stats);
+        }
       }
-      setUsers(payload.users);
-      setStats(payload.stats);
     } catch {
-      setError("Could not load user data.");
+      setError("Could not load admin overview data.");
     } finally {
       setUserDataLoading(false);
       setRefreshing(false);
@@ -240,11 +263,11 @@ export function AdminControlCentre() {
   }
 
   useEffect(() => {
-    if (access?.canManageUsers) {
+    if (access?.canManageUsers || access?.canManageDrills) {
       void loadOverview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [access?.canManageUsers]);
+  }, [access?.canManageUsers, access?.canManageDrills]);
 
   const newThisWeek = useMemo(
     () => users.filter((user) => isWithinDays(user.joinedAt, 7)).length,
@@ -364,6 +387,7 @@ export function AdminControlCentre() {
   const canManageUsers = access?.canManageUsers ?? false;
   const canManageAdmins = access?.canManageAdmins ?? false;
   const canViewAuditLog = access?.canViewAuditLog ?? false;
+  const canManageDrills = access?.canManageDrills ?? false;
   const isSuperAdmin = access?.isSuperAdmin ?? false;
 
   return (
@@ -380,7 +404,7 @@ export function AdminControlCentre() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center self-start md:self-auto">
-          {canManageUsers && (
+          {(canManageUsers || canManageDrills) && (
             <Button
               size="sm"
               variant="ghost"
@@ -447,25 +471,49 @@ export function AdminControlCentre() {
         </Card>
       ) : (
         <>
-          {canManageUsers && (activeTab === "overview" || activeTab === "users") && stats && (
+          {(activeTab === "overview" || activeTab === "users") &&
+            ((canManageUsers && stats) || (canManageDrills && drillKpis)) && (
             <section className="mb-5">
               <h2 className="text-sm font-extrabold text-navy mb-2">Key metrics</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-2">
-                <AdminKpiCard label="Total users" value={stats.totalUsers} sub="Training users only" />
-                <AdminKpiCard label="Active users" value={stats.activeUsers} sub="Training users only" />
-                <AdminKpiCard label="New this week" value={newThisWeek} />
-                <AdminKpiCard label="Logged in users" value={stats.usersLoggedIn} />
-                <AdminKpiCard label="Drill frequency mix" value={frequencyMix} sub="Weekly · Fortnightly · Monthly" />
-                <AdminKpiCard
-                  label="Latest signup"
-                  value={latestSignup ? latestSignup.name.split(" ")[0] : "—"}
-                  sub={latestSignup ? formatDate(latestSignup.joinedAt) : "No signups yet"}
-                />
-              </div>
+              {canManageUsers && stats && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-2">
+                  <AdminKpiCard label="Total users" value={stats.totalUsers} sub="Training users only" />
+                  <AdminKpiCard label="Active users" value={stats.activeUsers} sub="Training users only" />
+                  <AdminKpiCard label="New this week" value={newThisWeek} />
+                  <AdminKpiCard label="Logged in users" value={stats.usersLoggedIn} />
+                  <AdminKpiCard label="Drill frequency mix" value={frequencyMix} sub="Weekly · Fortnightly · Monthly" />
+                  <AdminKpiCard
+                    label="Latest signup"
+                    value={latestSignup ? latestSignup.name.split(" ")[0] : "—"}
+                    sub={latestSignup ? formatDate(latestSignup.joinedAt) : "No signups yet"}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-2">
-                <AdminKpiCard label="Drills sent" value="—" sub="Coming soon" muted />
-                <AdminKpiCard label="Bites / clicks" value="—" sub="Coming soon" muted />
-                <AdminKpiCard label="Spot rate" value="—" sub="Coming soon" muted />
+                <AdminKpiCard
+                  label="Drills sent"
+                  value={canManageDrills && drillKpis ? drillKpis.drillsSent : "—"}
+                  sub={canManageDrills ? "Live drills only" : "Needs manage drills"}
+                  muted={!canManageDrills || !drillKpis}
+                />
+                <AdminKpiCard
+                  label="Bites / clicks"
+                  value={canManageDrills && drillKpis ? drillKpis.bites : "—"}
+                  sub={canManageDrills ? "Caught outcomes" : "Needs manage drills"}
+                  muted={!canManageDrills || !drillKpis}
+                />
+                <AdminKpiCard
+                  label="Spot rate"
+                  value={
+                    canManageDrills && drillKpis
+                      ? drillKpis.spotRate === null
+                        ? "—"
+                        : `${drillKpis.spotRate}%`
+                      : "—"
+                  }
+                  sub={canManageDrills ? "Spotted ÷ completed" : "Needs manage drills"}
+                  muted={!canManageDrills || !drillKpis}
+                />
               </div>
             </section>
           )}
@@ -662,11 +710,16 @@ export function AdminControlCentre() {
             <ActivityLogPanel onError={setError} />
           )}
 
-          {(activeTab === "drills" || activeTab === "templates" || activeTab === "content") && (
+          {activeTab === "drills" && canManageDrills && (
+            <DrillsPanel onNotice={setNotice} onError={setError} />
+          )}
+
+          {(activeTab === "templates" || activeTab === "content") && (
             <Card className="!p-5 text-center">
               <p className="font-bold text-navy mb-1 capitalize">{activeTab} section</p>
               <p className="text-sm text-navy/60">
-                This area is planned for a future admin release. Use Overview and Users for now.
+                This area is planned for a future admin release. Use Overview, Users, and Drills for
+                now.
               </p>
             </Card>
           )}
@@ -730,8 +783,8 @@ export function AdminControlCentre() {
                 Training stats
               </p>
               <p className="text-sm text-navy/65">
-                Drill performance metrics will appear here once training events are stored in the
-                database. <span className="font-bold">Coming soon.</span>
+                Platform drill totals are available in the Drills tab. Per-user performance detail
+                will expand here as campaign history grows.
               </p>
             </div>
 

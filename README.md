@@ -39,12 +39,21 @@ Suggested filenames from the dont-bite asset library:
 - Recharts (dashboard charts)
 - localStorage mock data layer
 
-## Phase 2 (not in this mockup)
+## Drill delivery foundation
 
-- Real email delivery
-- User authentication
+Admins with `manage_drills` can send tracked test drills from the admin Drills tab.
+Training users can also trigger a practice drill from Account & Training Settings.
+
+Tracked click links look like `/api/drills/track/<token>` and open Phil's lesson page
+while recording a "caught" outcome. Users can mark pending drills as spotted from
+Training History. Dashboard stats and history now read from the `DrillSend` table.
+
+Still to come:
+
+- Real inbox email delivery
+- Scheduled live campaigns
+- Editable email templates in admin
 - Bank/platform brand partnerships
-- Backend API
 
 ## Dev-only: promote a user to admin
 
