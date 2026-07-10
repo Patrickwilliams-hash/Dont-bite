@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMockStore } from "@/lib/use-mock-store";
 import { getWeakestScamType } from "@/lib/mock-store";
 import { PhilMascot } from "@/components/phil/PhilMascot";
+import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { StatCard, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Share2, Check } from "lucide-react";
@@ -37,15 +37,9 @@ const tipsByType: Record<string, string> = {
 
 export default function ReportPage() {
   const store = useMockStore();
-  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const weakest = getWeakestScamType(store);
-
-  useEffect(() => {
-    if (!store.user) router.push("/signup");
-  }, [store.user, router]);
-
-  if (!store.user) return null;
+  if (!store.user) return <ProtectedDashboardGate />;
 
   const month = new Date().toLocaleDateString("en-NZ", { month: "long", year: "numeric" });
   const completedDrills = store.stats.spotted + store.stats.caught;

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMockStore } from "@/lib/use-mock-store";
 import { updateLocalUser } from "@/lib/mock-store";
 import { PhilMascot } from "@/components/phil/PhilMascot";
+import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { Button } from "@/components/ui/Button";
 import { StatCard, Card } from "@/components/ui/Card";
 import { BookOpen, History, Settings, ShieldCheck, Sprout } from "lucide-react";
@@ -21,15 +21,9 @@ const TrendChart = dynamic(
 
 export default function DashboardPage() {
   const store = useMockStore();
-  const router = useRouter();
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState("");
-
-  useEffect(() => {
-    if (!store.user) router.push("/signup");
-  }, [store.user, router]);
-
-  if (!store.user) return null;
+  if (!store.user) return <ProtectedDashboardGate />;
 
   const firstName = store.user.name.split(" ")[0];
   const trainingActive = store.user.trainingActive;

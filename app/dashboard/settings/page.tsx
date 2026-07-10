@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMockStore } from "@/lib/use-mock-store";
 import { logout, updateLocalUser, type DrillFrequency } from "@/lib/mock-store";
+import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { AlertTriangle, ArrowLeft, KeyRound, Mail, Settings, User } from "lucide-react";
@@ -38,11 +39,7 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!store.user) router.push("/signup");
-  }, [store.user, router]);
-
-  if (!store.user) return null;
+  if (!store.user) return <ProtectedDashboardGate />;
 
   const user = store.user;
 

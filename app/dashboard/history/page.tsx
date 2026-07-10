@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMockStore } from "@/lib/use-mock-store";
 import { PhilMascot } from "@/components/phil/PhilMascot";
+import { ProtectedDashboardGate } from "@/components/dashboard/ProtectedDashboardGate";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, History } from "lucide-react";
 
 export default function TrainingHistoryPage() {
   const store = useMockStore();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!store.user) router.push("/signup");
-  }, [store.user, router]);
-
-  if (!store.user) return null;
+  if (!store.user) return <ProtectedDashboardGate />;
 
   return (
     <div className="max-w-3xl mx-auto px-5 md:px-10 py-12">

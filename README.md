@@ -45,3 +45,17 @@ Suggested filenames from the dont-bite asset library:
 - User authentication
 - Bank/platform brand partnerships
 - Backend API
+
+## Dev-only: promote a user to admin
+
+Admin APIs are now role-protected (`role === "admin"`). Do not expose admin promotion in public UI.
+
+Recommended approach (Supabase Table Editor):
+
+1. Open your Supabase project.
+2. Go to Table Editor -> `User`.
+3. Find the existing user row by email.
+4. Set `role` from `user` to `admin`.
+5. Save the row.
+
+This is a developer/operator action only. Avoid adding a public route or client-side control for role changes.
