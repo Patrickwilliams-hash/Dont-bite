@@ -129,6 +129,10 @@ export function formatAuditSummary(input: {
       return `${input.actorName} sent a password reset email${target}.`;
     case "ADMIN_USER_EMAIL_CHANGED":
       return `${input.actorName} changed the account email address${target} (support recovery).`;
+    case "DRILL_SENT":
+      return `${input.actorName} sent a training drill${target}.`;
+    case "DRILL_SEND_FAILED":
+      return `${input.actorName} attempted to send a training drill${target}, but delivery failed.`;
     default:
       return `${input.actorName} performed ${input.action.replaceAll("_", " ").toLowerCase()}${target}.`;
   }

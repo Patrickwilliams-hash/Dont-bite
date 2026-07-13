@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { AdministratorsPanel } from "@/components/admin/AdministratorsPanel";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { ActivityLogPanel } from "@/components/admin/ActivityLogPanel";
+import { SendDrillPanel } from "@/components/admin/SendDrillPanel";
 import { TestEmailPanel } from "@/components/admin/TestEmailPanel";
 
 interface AdminUser {
@@ -47,6 +48,7 @@ interface AdminAccess {
   canManageUsers: boolean;
   canManageAdmins: boolean;
   canViewAuditLog: boolean;
+  canManageDrills: boolean;
   canSendTestEmail: boolean;
 }
 
@@ -67,7 +69,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: typeof LayoutDashboard; e
   { id: "users", label: "Users", icon: Users, enabled: true },
   { id: "administrators", label: "Administrators", icon: ShieldCheck, enabled: true },
   { id: "activity", label: "Activity Log", icon: ClipboardList, enabled: true },
-  { id: "drills", label: "Drills", icon: Target, enabled: false },
+  { id: "drills", label: "Drills", icon: Target, enabled: true },
   { id: "templates", label: "Templates", icon: Mail, enabled: false },
   { id: "content", label: "Content", icon: BookOpen, enabled: false },
 ];
@@ -137,10 +139,11 @@ function AdminKpiCard({
 function isTabAccessible(tab: AdminTab, access: AdminAccess): boolean {
   switch (tab) {
     case "overview":
-    case "drills":
     case "templates":
     case "content":
       return true;
+    case "drills":
+      return access.canManageDrills;
     case "users":
       return access.canManageUsers;
     case "administrators":
@@ -776,7 +779,11 @@ export function AdminControlCentre() {
             <ActivityLogPanel onError={setError} />
           )}
 
-          {(activeTab === "drills" || activeTab === "templates" || activeTab === "content") && (
+          {activeTab === "drills" && access?.canManageDrills && (
+            <SendDrillPanel onNotice={setNotice} onError={setError} />
+          )}
+
+          {(activeTab === "templates" || activeTab === "content") && (
             <Card className="!p-5 text-center">
               <p className="font-bold text-navy mb-1 capitalize">{activeTab} section</p>
               <p className="text-sm text-navy/60">

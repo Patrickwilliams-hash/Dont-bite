@@ -16,6 +16,7 @@ export interface SendEmailInput {
   subject: string;
   text: string;
   html: string;
+  fromName?: string;
 }
 
 let cachedTransporter: Transporter | null = null;
@@ -49,6 +50,11 @@ function isValidRecipient(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function extractFromAddress(from: string): string {
+  const match = from.match(/<([^>]+)>/);
+  return match?.[1]?.trim() ?? from.trim();
+}
+
 export async function sendEmail(input: SendEmailInput): Promise<void> {
   const to = input.to.trim();
   if (!to || !isValidRecipient(to)) {
@@ -65,9 +71,15 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
     throw error;
   }
 
+  const fromAddress = extractFromAddress(config.from);
+  const from =
+    input.fromName?.trim()
+      ? { name: input.fromName.trim(), address: fromAddress }
+      : config.from;
+
   try {
     await getTransporter().sendMail({
-      from: config.from,
+      from,
       to,
       subject: input.subject,
       text: input.text,
