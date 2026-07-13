@@ -21,6 +21,7 @@ export async function GET() {
         frequency: true,
         role: true,
         isActive: true,
+        trainingActive: true,
         joinedAt: true,
         lastLoginAt: true,
         createdAt: true,

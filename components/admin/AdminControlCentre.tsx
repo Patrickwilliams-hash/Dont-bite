@@ -29,6 +29,7 @@ interface AdminUser {
   frequency: "weekly" | "fortnightly" | "monthly";
   role: "user" | "admin";
   isActive: boolean;
+  trainingActive: boolean;
   joinedAt: string;
   createdAt: string;
   lastLoginAt: string | null;
@@ -54,6 +55,7 @@ interface AdminAccess {
 
 type AdminTab = "overview" | "users" | "administrators" | "activity" | "drills" | "templates" | "content";
 type StatusFilter = "all" | "active" | "disabled";
+type TrainingFilter = "all" | "active" | "paused";
 type FrequencyFilter = "all" | "weekly" | "fortnightly" | "monthly";
 type SortKey = "joined-desc" | "joined-asc" | "login-desc" | "login-asc" | "name-asc";
 
@@ -176,6 +178,7 @@ export function AdminControlCentre() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [trainingFilter, setTrainingFilter] = useState<TrainingFilter>("all");
   const [frequencyFilter, setFrequencyFilter] = useState<FrequencyFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("joined-desc");
 
@@ -189,6 +192,7 @@ export function AdminControlCentre() {
   const [changeEmailReason, setChangeEmailReason] = useState("");
   const [changeEmailBusy, setChangeEmailBusy] = useState(false);
   const [sendingResetEmailId, setSendingResetEmailId] = useState<string | null>(null);
+  const [trainingBusyId, setTrainingBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -316,9 +320,13 @@ export function AdminControlCentre() {
         statusFilter === "all" ||
         (statusFilter === "active" && user.isActive) ||
         (statusFilter === "disabled" && !user.isActive);
+      const matchesTraining =
+        trainingFilter === "all" ||
+        (trainingFilter === "active" && user.trainingActive) ||
+        (trainingFilter === "paused" && !user.trainingActive);
       const matchesFrequency =
         frequencyFilter === "all" || user.frequency === frequencyFilter;
-      return matchesSearch && matchesStatus && matchesFrequency;
+      return matchesSearch && matchesStatus && matchesTraining && matchesFrequency;
     });
 
     result = [...result].sort((a, b) => {
@@ -344,7 +352,7 @@ export function AdminControlCentre() {
     });
 
     return result;
-  }, [users, search, statusFilter, frequencyFilter, sortKey]);
+  }, [users, search, statusFilter, trainingFilter, frequencyFilter, sortKey]);
 
   async function deleteUser(user: AdminUser) {
     setDeleting(true);
@@ -382,6 +390,43 @@ export function AdminControlCentre() {
       setError("Failed to send password reset email.");
     } finally {
       setSendingResetEmailId(null);
+    }
+  }
+
+  async function toggleTrainingStatus(user: AdminUser) {
+    const nextTrainingActive = !user.trainingActive;
+    setTrainingBusyId(user.id);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/training`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trainingActive: nextTrainingActive }),
+      });
+      const payload = (await res.json()) as {
+        error?: string;
+        user?: { id: string; trainingActive: boolean };
+      };
+      if (!res.ok || !payload.user) {
+        setError(payload.error ?? "Failed to update training status.");
+        return;
+      }
+      const resolved = payload.user.trainingActive;
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, trainingActive: resolved } : u))
+      );
+      setSelectedUser((prev) =>
+        prev && prev.id === user.id ? { ...prev, trainingActive: resolved } : prev
+      );
+      setNotice(
+        resolved
+          ? `Training reactivated for ${user.email}.`
+          : `Training paused for ${user.email}.`
+      );
+    } catch {
+      setError("Failed to update training status.");
+    } finally {
+      setTrainingBusyId(null);
     }
   }
 
@@ -658,6 +703,16 @@ export function AdminControlCentre() {
                         <option value="disabled">Disabled</option>
                       </select>
                       <select
+                        value={trainingFilter}
+                        onChange={(e) => setTrainingFilter(e.target.value as TrainingFilter)}
+                        className={selectClass}
+                        aria-label="Filter by training status"
+                      >
+                        <option value="all">All training</option>
+                        <option value="active">Active</option>
+                        <option value="paused">Paused</option>
+                      </select>
+                      <select
                         value={frequencyFilter}
                         onChange={(e) => setFrequencyFilter(e.target.value as FrequencyFilter)}
                         className={selectClass}
@@ -691,6 +746,7 @@ export function AdminControlCentre() {
                           <th className="py-2 pr-3 font-bold">Email</th>
                           <th className="py-2 pr-3 font-bold">Frequency</th>
                           <th className="py-2 pr-3 font-bold">Status</th>
+                          <th className="py-2 pr-3 font-bold">Training</th>
                           <th className="py-2 pr-3 font-bold">Last login</th>
                           <th className="py-2 pr-3 font-bold">Joined</th>
                           <th className="py-2 pr-0 font-bold">Actions</th>
@@ -707,6 +763,11 @@ export function AdminControlCentre() {
                                 {user.isActive ? "Active" : "Disabled"}
                               </Badge>
                             </td>
+                            <td className="py-2.5 pr-3">
+                              <Badge variant={user.trainingActive ? "success" : "warning"}>
+                                {user.trainingActive ? "Active" : "Paused"}
+                              </Badge>
+                            </td>
                             <td className="py-2.5 pr-3 text-navy/70 whitespace-nowrap">
                               {formatDateTime(user.lastLoginAt)}
                             </td>
@@ -721,6 +782,18 @@ export function AdminControlCentre() {
                                   onClick={() => setSelectedUser(user)}
                                 >
                                   View
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs font-bold text-navy hover:text-coral-dark disabled:opacity-50"
+                                  disabled={trainingBusyId === user.id}
+                                  onClick={() => toggleTrainingStatus(user)}
+                                >
+                                  {trainingBusyId === user.id
+                                    ? "Saving…"
+                                    : user.trainingActive
+                                    ? "Pause training"
+                                    : "Resume training"}
                                 </button>
                                 <button
                                   type="button"
@@ -832,6 +905,10 @@ export function AdminControlCentre() {
                   <dd className="text-navy">{selectedUser.isActive ? "Active" : "Disabled"}</dd>
                 </div>
                 <div>
+                  <dt className="font-bold text-navy/55">Training</dt>
+                  <dd className="text-navy">{selectedUser.trainingActive ? "Active" : "Paused"}</dd>
+                </div>
+                <div>
                   <dt className="font-bold text-navy/55">Frequency</dt>
                   <dd className="text-navy capitalize">{selectedUser.frequency}</dd>
                 </div>
@@ -870,6 +947,19 @@ export function AdminControlCentre() {
               <p className="text-xs font-extrabold uppercase tracking-wide text-navy/50">
                 Account actions
               </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full !rounded-lg"
+                disabled={trainingBusyId === selectedUser.id}
+                onClick={() => toggleTrainingStatus(selectedUser)}
+              >
+                {trainingBusyId === selectedUser.id
+                  ? "Saving…"
+                  : selectedUser.trainingActive
+                  ? "Pause training"
+                  : "Resume training"}
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"

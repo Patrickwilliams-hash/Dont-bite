@@ -105,6 +105,10 @@ export function formatAuditSummary(input: {
       return `${input.actorName} reset the password${target}.`;
     case "USER_DELETED":
       return `${input.actorName} deleted user account${target}.`;
+    case "USER_TRAINING_PAUSED":
+      return `${input.actorName} paused training${target}.`;
+    case "USER_TRAINING_REACTIVATED":
+      return `${input.actorName} reactivated training${target}.`;
     case "ADMIN_LOGIN_SUCCESS":
       return `${input.actorName} signed in to admin.`;
     case "ADMIN_LOGOUT":
