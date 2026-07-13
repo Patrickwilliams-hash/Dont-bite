@@ -1,3 +1,4 @@
+import type { DrillDeliveryPurpose, DrillOutcome } from "@prisma/client";
 import { PhilMascot } from "@/components/phil/PhilMascot";
 import { RedFlagHighlight } from "@/components/drill/RedFlagHighlight";
 import { FakeUrlBar } from "@/components/drill/FakeUrlBar";
@@ -6,13 +7,55 @@ import { Card } from "@/components/ui/Card";
 import { CheckCircle, Lock } from "lucide-react";
 import type { DebriefTemplateContent } from "@/lib/drill/template-content";
 
-export function PhilDebrief({ content }: { content: DebriefTemplateContent }) {
+interface PhilDebriefProps {
+  content: DebriefTemplateContent;
+  purpose: DrillDeliveryPurpose;
+  outcome: DrillOutcome;
+}
+
+function debriefHeading(outcome: DrillOutcome): string {
+  switch (outcome) {
+    case "link_followed":
+      return "You took the bait";
+    case "input_attempted":
+      return "You were hooked";
+    case "no_interaction":
+      return "Swam clear";
+    case "pending":
+    default:
+      return "Training drill";
+  }
+}
+
+function debriefLead(outcome: DrillOutcome, brandName: string): string {
+  switch (outcome) {
+    case "link_followed":
+      return "You followed a link in a simulated suspicious email.";
+    case "input_attempted":
+      return "You began entering information on a simulated suspicious page.";
+    case "no_interaction":
+      return "No unsafe interaction was detected during this drill period.";
+    case "pending":
+    default:
+      return `This page shows what a fake ${brandName} landing page could look like. It was part of a safe Don't Bite drill — not a real scam.`;
+  }
+}
+
+export function PhilDebrief({ content, purpose, outcome }: PhilDebriefProps) {
+  const isDemo = purpose === "demo";
+
   return (
     <div className="max-w-3xl mx-auto px-5 py-12">
-      <div className="flex items-center justify-center gap-2 text-xs font-bold text-navy/50 mb-6">
-        <Lock size={14} />
-        This is a simulated Don&apos;t Bite training drill. You reached this page because the
-        drill link was followed.
+      <div className="flex flex-col items-center gap-2 text-xs font-bold text-navy/50 mb-6 text-center">
+        <div className="flex items-center gap-2">
+          <Lock size={14} />
+          This is a simulated Don&apos;t Bite training drill.
+        </div>
+        {isDemo && (
+          <span className="inline-flex items-center rounded-full bg-gold/30 text-navy px-3 py-1 text-[0.65rem] font-extrabold uppercase tracking-wide">
+            Demo drill — does not affect your training progress
+          </span>
+        )}
       </div>
 
       <div className="rounded-2xl border border-navy/10 overflow-hidden mb-8 shadow-[var(--shadow-soft)]">
@@ -38,12 +81,9 @@ export function PhilDebrief({ content }: { content: DebriefTemplateContent }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[1px] text-center px-6">
             <PhilMascot pose="surprised" size={120} className="mb-3" />
             <h1 className="font-display text-3xl md:text-4xl font-black text-navy">
-              Training drill
+              {debriefHeading(outcome)}
             </h1>
-            <p className="text-navy/70 mt-2 max-w-sm">
-              This page shows what a fake <strong>{content.brandName}</strong> landing page could
-              look like. It was part of a safe Don&apos;t Bite drill — not a real scam.
-            </p>
+            <p className="text-navy/70 mt-2 max-w-sm">{debriefLead(outcome, content.brandName)}</p>
           </div>
         </div>
       </div>
@@ -82,6 +122,12 @@ export function PhilDebrief({ content }: { content: DebriefTemplateContent }) {
         <p className="text-navy/60 text-sm mt-1">
           These warning signs are for learning. Next time a suspicious email arrives, pause before
           following links — and report it if you are unsure.
+          {isDemo && (
+            <>
+              {" "}
+              Demo drills are for practice only and do not count toward your training results.
+            </>
+          )}
         </p>
       </div>
 

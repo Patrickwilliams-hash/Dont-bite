@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { DrillDeliveryStatus } from "@prisma/client";
+import type { DrillDeliveryPurpose, DrillDeliveryStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getEmailConfig } from "@/lib/email/config";
 import { EmailSendError, sendEmail } from "@/lib/email/mailer";
@@ -17,6 +17,14 @@ import {
 } from "@/lib/drill/send-drill-test-capture";
 
 export const DRILL_LINK_TTL_MS = 1000 * 60 * 60 * 24 * 14;
+
+/**
+ * Future expiry processing (not implemented in Stage 3A):
+ * - pending training deliveries past expiresAt → no_interaction
+ * - demo deliveries may expire but never affect scoring or progression
+ */
+export const DRILL_EXPIRY_NOTE =
+  "Training deliveries that remain pending until expiresAt will later be marked no_interaction by a scheduled sweep.";
 
 export class DrillSendValidationError extends Error {
   constructor(message: string) {
@@ -37,15 +45,24 @@ export class DrillSendDeliveryError extends Error {
   }
 }
 
+export interface DrillSendInput {
+  templateId: string;
+  userId: string;
+  purpose: DrillDeliveryPurpose;
+  triggeredByUserId: string | null;
+  /** When true, recipient must have trainingActive. Training-purpose sends only. */
+  requireTrainingActive?: boolean;
+}
+
+export interface DrillSendResult {
+  deliveryId: string;
+  status: Extract<DrillDeliveryStatus, "sent">;
+}
+
 export interface ManualDrillSendInput {
   templateId: string;
   userId: string;
   triggeredByUserId: string;
-}
-
-export interface ManualDrillSendResult {
-  deliveryId: string;
-  status: Extract<DrillDeliveryStatus, "sent">;
 }
 
 function classifySendError(error: unknown): DrillSendErrorCode {
@@ -81,7 +98,10 @@ function getEmailContentForTemplate(
   throw new DrillSendValidationError("This drill template is not enabled for sending yet.");
 }
 
-async function loadEligibleRecipient(userId: string) {
+async function loadRecipient(
+  userId: string,
+  options: { requireTrainingActive: boolean }
+) {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: {
@@ -103,7 +123,7 @@ async function loadEligibleRecipient(userId: string) {
   if (!user.isActive) {
     throw new DrillSendValidationError("This user account is inactive.");
   }
-  if (!user.trainingActive) {
+  if (options.requireTrainingActive && !user.trainingActive) {
     throw new DrillSendValidationError("This user has paused training emails.");
   }
 
@@ -134,40 +154,17 @@ async function loadActiveTemplate(templateId: string) {
   return template;
 }
 
-export async function sendDrillManually(
-  input: ManualDrillSendInput
-): Promise<ManualDrillSendResult> {
-  const [template, recipient] = await Promise.all([
-    loadActiveTemplate(input.templateId),
-    loadEligibleRecipient(input.userId),
-  ]);
-
-  let appUrl: string;
-  try {
-    appUrl = getEmailConfig().appUrl;
-  } catch {
-    throw new DrillSendValidationError("Email delivery is not configured.");
-  }
-
-  const tracking = createDeliveryTracking(appUrl);
-  const placeholderExpiresAt = new Date(Date.now() + DRILL_LINK_TTL_MS);
-
-  const delivery = await db.drillDelivery.create({
-    data: {
-      userId: recipient.id,
-      templateId: template.id,
-      trackingTokenHash: tracking.trackingTokenHash,
-      status: "queued",
-      outcome: "pending",
-      expiresAt: placeholderExpiresAt,
-      triggeredByUserId: input.triggeredByUserId,
-    },
-    select: { id: true },
-  });
+export async function finalizeDrillDeliverySend(input: {
+  deliveryId: string;
+  template: Awaited<ReturnType<typeof loadActiveTemplate>>;
+  recipient: { name: string; email: string };
+  tracking: ReturnType<typeof createDeliveryTracking>;
+}): Promise<DrillSendResult> {
+  const { deliveryId, template, recipient, tracking } = input;
 
   const claimed = await db.drillDelivery.updateMany({
     where: {
-      id: delivery.id,
+      id: deliveryId,
       status: "queued",
     },
     data: {
@@ -177,7 +174,7 @@ export async function sendDrillManually(
 
   if (claimed.count !== 1) {
     throw new DrillSendDeliveryError(
-      delivery.id,
+      deliveryId,
       DRILL_SEND_ERROR_CODES.UNKNOWN,
       "This drill delivery could not be claimed for sending."
     );
@@ -192,14 +189,14 @@ export async function sendDrillManually(
     );
   } catch (error) {
     await db.drillDelivery.update({
-      where: { id: delivery.id },
+      where: { id: deliveryId },
       data: {
         status: "failed",
         sendErrorCode: DRILL_SEND_ERROR_CODES.RENDER_FAILED,
       },
     });
     throw new DrillSendDeliveryError(
-      delivery.id,
+      deliveryId,
       DRILL_SEND_ERROR_CODES.RENDER_FAILED,
       error instanceof Error ? error.message : "Failed to render drill email."
     );
@@ -207,7 +204,7 @@ export async function sendDrillManually(
 
   if (isDrillSendTestCaptureEnabled()) {
     await writeDrillSendTestCapture({
-      deliveryId: delivery.id,
+      deliveryId,
       trackingTokenHash: tracking.trackingTokenHash,
       trackingUrl: tracking.trackingUrl,
       emailHtml: emailContent.html,
@@ -227,14 +224,14 @@ export async function sendDrillManually(
   } catch (error) {
     const sendErrorCode = classifySendError(error);
     await db.drillDelivery.update({
-      where: { id: delivery.id },
+      where: { id: deliveryId },
       data: {
         status: "failed",
         sendErrorCode,
       },
     });
     throw new DrillSendDeliveryError(
-      delivery.id,
+      deliveryId,
       sendErrorCode,
       "The drill email could not be delivered. Please try again shortly."
     );
@@ -242,7 +239,7 @@ export async function sendDrillManually(
 
   const sentAt = new Date();
   await db.drillDelivery.update({
-    where: { id: delivery.id },
+    where: { id: deliveryId },
     data: {
       status: "sent",
       sentAt,
@@ -251,7 +248,61 @@ export async function sendDrillManually(
   });
 
   return {
-    deliveryId: delivery.id,
+    deliveryId,
     status: "sent",
   };
+}
+
+export async function sendDrill(input: DrillSendInput): Promise<DrillSendResult> {
+  const requireTrainingActive =
+    input.requireTrainingActive ?? input.purpose === "training";
+
+  const [template, recipient] = await Promise.all([
+    loadActiveTemplate(input.templateId),
+    loadRecipient(input.userId, { requireTrainingActive }),
+  ]);
+
+  let appUrl: string;
+  try {
+    appUrl = getEmailConfig().appUrl;
+  } catch {
+    throw new DrillSendValidationError("Email delivery is not configured.");
+  }
+
+  const tracking = createDeliveryTracking(appUrl);
+  const placeholderExpiresAt = new Date(Date.now() + DRILL_LINK_TTL_MS);
+
+  const delivery = await db.drillDelivery.create({
+    data: {
+      userId: recipient.id,
+      templateId: template.id,
+      trackingTokenHash: tracking.trackingTokenHash,
+      status: "queued",
+      purpose: input.purpose,
+      outcome: "pending",
+      expiresAt: placeholderExpiresAt,
+      triggeredByUserId: input.triggeredByUserId,
+    },
+    select: { id: true },
+  });
+
+  return finalizeDrillDeliverySend({
+    deliveryId: delivery.id,
+    template,
+    recipient,
+    tracking,
+  });
+}
+
+/** Admin-initiated manual sends are demo deliveries and do not count toward training results. */
+export async function sendDrillManually(
+  input: ManualDrillSendInput
+): Promise<DrillSendResult> {
+  return sendDrill({
+    templateId: input.templateId,
+    userId: input.userId,
+    purpose: "demo",
+    triggeredByUserId: input.triggeredByUserId,
+    requireTrainingActive: true,
+  });
 }

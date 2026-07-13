@@ -35,10 +35,21 @@ enum DrillDeliveryStatus {
   cancelled
 }
 
+enum DrillDeliveryPurpose {
+  demo
+  training
+}
+
+enum DrillInteractionType {
+  link_visit
+  first_input_attempt
+}
+
 enum DrillOutcome {
   pending
-  caught
   no_interaction
+  link_followed
+  input_attempted
 }
 
 model User {
@@ -83,6 +94,7 @@ model DrillTemplate {
   emailPreviewText String?
   emailBodyHtml    String?  @db.Text
   emailBodyText    String?  @db.Text
+  interactionType  DrillInteractionType @default(link_visit)
   isActive         Boolean  @default(true)
   createdByUserId  String?
   createdAt        DateTime @default(now())
@@ -97,6 +109,7 @@ model DrillDelivery {
   templateId        String
   trackingTokenHash String              @unique
   status            DrillDeliveryStatus
+  purpose           DrillDeliveryPurpose @default(training)
   outcome           DrillOutcome        @default(pending)
   sentAt            DateTime?
   caughtAt          DateTime?
@@ -113,6 +126,7 @@ model DrillDelivery {
   @@index([templateId, createdAt])
   @@index([status, createdAt])
   @@index([outcome, expiresAt])
+  @@index([userId, purpose, sentAt])
 }
 
 model DrillEvent {

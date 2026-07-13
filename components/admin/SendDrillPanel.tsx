@@ -170,7 +170,7 @@ export function SendDrillPanel({ onNotice, onError }: SendDrillPanelProps) {
       }
 
       onNotice(
-        `Training drill sent to ${selectedUser.name}. They should receive the email in their inbox shortly.`
+        `Demo drill sent to ${selectedUser.name}. They should receive the email in their inbox shortly.`
       );
       setConfirmOpen(false);
       setSelectedUser(null);
@@ -186,28 +186,40 @@ export function SendDrillPanel({ onNotice, onError }: SendDrillPanelProps) {
   return (
     <div className="space-y-4">
       <Card className="!p-5">
+        <h2 className="font-bold text-lg text-navy mb-2">Training drills</h2>
+        <p className="text-sm text-navy/60">
+          Genuine training drill campaigns and templates will be managed here in a future release.
+          Use the demo section below for ParcelPath testing.
+        </p>
+      </Card>
+
+      <Card className="!p-5">
         <h2 className="font-bold text-lg text-navy mb-2 flex items-center gap-2">
-          <Target size={16} /> Send test drill
+          <Target size={16} /> Demo drill — ParcelPath
         </h2>
         <p className="text-sm text-navy/60 mb-4">
-          Send one realistic simulated scam email to a consenting training user. Manual sends only
-          — one recipient at a time.
+          Send one realistic simulated scam email to a consenting training user for testing or
+          support. Demo deliveries do not count toward training results, scores, or progression.
         </p>
 
         {templatesLoading ? (
-          <p className="text-sm text-navy/60">Loading drill template…</p>
+          <p className="text-sm text-navy/60">Loading demo template…</p>
         ) : templatesError ? (
           <p className="text-sm font-bold text-coral">{templatesError}</p>
         ) : !template ? (
-          <p className="text-sm text-navy/60">No active drill templates are available.</p>
+          <p className="text-sm text-navy/60">No active demo templates are available.</p>
         ) : (
           <div className="rounded-xl border border-navy/10 bg-white/80 p-4 mb-5">
             <p className="text-xs font-black uppercase tracking-wide text-coral-dark/90 mb-1">
-              Stage 2 template
+              Demo drill
             </p>
             <p className="font-bold text-navy">{template.title}</p>
             <p className="text-sm text-navy/60 mt-1">
               Fictional brand: {template.brandName} · {template.scamType}
+            </p>
+            <p className="text-xs text-navy/50 mt-2">
+              Deliveries are recorded with purpose <strong>demo</strong> and excluded from future
+              training statistics.
             </p>
           </div>
         )}
@@ -310,7 +322,7 @@ export function SendDrillPanel({ onNotice, onError }: SendDrillPanelProps) {
           disabled={!template || !selectedUser || sending}
           onClick={() => setConfirmOpen(true)}
         >
-          Send Now
+          Send demo drill
         </Button>
       </Card>
 
@@ -321,8 +333,8 @@ export function SendDrillPanel({ onNotice, onError }: SendDrillPanelProps) {
             <p className="font-bold text-navy mb-1">Known limitation: email security scanners</p>
             <p>
               Some email security systems may prefetch links before a person opens the message. That
-              can record a <strong>caught</strong> outcome even when the recipient did not click.
-              Stage 2 keeps the route and debrief wording neutral for this reason.
+              can record a <strong>link followed</strong> outcome even when the recipient did not
+              click. The route and debrief wording stay neutral for this reason.
             </p>
           </div>
         </div>
@@ -337,9 +349,12 @@ export function SendDrillPanel({ onNotice, onError }: SendDrillPanelProps) {
             onClick={() => !sending && setConfirmOpen(false)}
           />
           <div className="relative w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
-            <h3 className="font-display text-xl font-black text-navy mb-2">Send this training drill now?</h3>
+            <h3 className="font-display text-xl font-black text-navy mb-2">
+              Send this demo drill now?
+            </h3>
             <p className="text-sm text-navy/70 mb-4">
               The selected user will receive a realistic simulated scam email in their real inbox.
+              This is a demo delivery and will not count toward their training results.
             </p>
             <p className="text-sm text-navy mb-1">
               <strong>Template:</strong> {template.title}
@@ -363,7 +378,7 @@ export function SendDrillPanel({ onNotice, onError }: SendDrillPanelProps) {
                 disabled={sending}
                 onClick={() => void handleSend()}
               >
-                {sending ? "Sending…" : "Send drill"}
+                {sending ? "Sending…" : "Send demo drill"}
               </Button>
             </div>
           </div>

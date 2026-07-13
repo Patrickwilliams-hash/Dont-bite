@@ -455,13 +455,13 @@ async function main() {
       const firstClick = await fetch(`${base}/drill/${clickRawToken}`);
       assert(firstClick.ok, `first click route failed: ${firstClick.status}`);
       const afterFirst = await db.drillDelivery.findUnique({ where: { id: clickDelivery.id } });
-      assert(afterFirst?.outcome === "caught", "first click did not set caught");
+      assert(afterFirst?.outcome === "link_followed", "first click did not set link_followed");
       assert(afterFirst?.caughtAt instanceof Date, "caughtAt missing after first click");
       const eventCount = await db.drillEvent.count({
         where: { deliveryId: clickDelivery.id, eventType: DRILL_LINK_EVENT_TYPE },
       });
       assert(eventCount === 1, "expected exactly one link_clicked event");
-      console.log("PASS: first click records caught and one event");
+      console.log("PASS: first click records link_followed and one event");
 
       const secondClick = await fetch(`${base}/drill/${clickRawToken}`);
       assert(secondClick.ok, `repeat click route failed: ${secondClick.status}`);

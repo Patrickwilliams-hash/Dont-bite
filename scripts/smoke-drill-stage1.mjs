@@ -36,7 +36,7 @@ async function recordFirstClickIfPending(deliveryId) {
   await db.$transaction(async (tx) => {
     const updated = await tx.drillDelivery.updateMany({
       where: { id: deliveryId, outcome: "pending" },
-      data: { outcome: "caught", caughtAt: new Date() },
+      data: { outcome: "link_followed", caughtAt: new Date() },
     });
 
     if (updated.count !== 1) return;
@@ -163,13 +163,13 @@ async function main() {
     await recordFirstClickIfPending(delivery.id);
 
     const afterFirst = await db.drillDelivery.findUnique({ where: { id: delivery.id } });
-    assert(afterFirst?.outcome === "caught", "expected outcome caught after first visit");
+    assert(afterFirst?.outcome === "link_followed", "expected outcome link_followed after first visit");
     assert(afterFirst?.caughtAt instanceof Date, "expected caughtAt after first visit");
     assert(
       (await countLinkClickedEvents(delivery.id)) === 1,
       "expected exactly one link_clicked event after first visit"
     );
-    console.log("PASS: first visit records caught outcome and one event");
+    console.log("PASS: first visit records link_followed outcome and one event");
 
     await recordFirstClickIfPending(delivery.id);
 
@@ -197,7 +197,7 @@ async function main() {
       assert(validHtml.includes("simulated Don"), "debrief missing training disclosure");
 
       const routeAfterFirst = await db.drillDelivery.findUnique({ where: { id: routeDelivery.id } });
-      assert(routeAfterFirst?.outcome === "caught", "route first visit did not set caught");
+      assert(routeAfterFirst?.outcome === "link_followed", "route first visit did not set link_followed");
       assert(routeAfterFirst?.caughtAt instanceof Date, "route first visit did not set caughtAt");
       assert(
         (await countLinkClickedEvents(routeDelivery.id)) === 1,

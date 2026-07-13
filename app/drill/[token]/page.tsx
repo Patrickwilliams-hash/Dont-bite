@@ -36,5 +36,11 @@ export default async function DrillTokenPage({
     );
   }
 
-  return <PhilDebrief content={result.content} />;
+  return (
+    <PhilDebrief
+      content={result.content}
+      purpose={result.purpose}
+      outcome={result.outcome}
+    />
+  );
 }

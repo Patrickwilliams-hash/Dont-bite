@@ -19,6 +19,7 @@ export async function ensureParcelPathTemplate() {
     learnSlug: parcelPathDrillDefinition.learnSlug,
     emailSubject: parcelPathDrillDefinition.emailSubject,
     emailPreviewText: parcelPathDrillDefinition.emailPreviewText,
+    interactionType: "link_visit" as const,
     isActive: true,
   };
 
@@ -37,6 +38,7 @@ export async function ensureParcelPathTemplate() {
       scamType: true,
       emailSubject: true,
       emailPreviewText: true,
+      interactionType: true,
       isActive: true,
     },
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMockStore } from "@/lib/use-mock-store";
@@ -26,6 +26,13 @@ function formatJoined(value: string) {
   });
 }
 
+const DEMO_SUCCESS_MESSAGE =
+  "Demo sent! Check your inbox for a ParcelPath training email.";
+const DEMO_COOLDOWN_MESSAGE =
+  "You've already requested a demo recently. Try again later.";
+
+type DemoPanelState = "idle" | "sending" | "sent_success" | "cooldown" | "error";
+
 export default function SettingsPage() {
   const store = useMockStore();
   const router = useRouter();
@@ -33,6 +40,8 @@ export default function SettingsPage() {
 
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingFrequency, setSavingFrequency] = useState(false);
+  const [demoPanelState, setDemoPanelState] = useState<DemoPanelState>("idle");
+  const [demoPanelMessage, setDemoPanelMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
@@ -42,6 +51,48 @@ export default function SettingsPage() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const userEmail = store.user?.email ?? null;
+    if (!userEmail) {
+      setDemoPanelState("idle");
+      setDemoPanelMessage(null);
+      return;
+    }
+
+    let mounted = true;
+    setDemoPanelState("idle");
+    setDemoPanelMessage(null);
+
+    async function loadDemoStatus() {
+      try {
+        const res = await fetch("/api/account/drills/demo", { cache: "no-store" });
+        const payload = (await res.json()) as {
+          ok?: boolean;
+          canRequest?: boolean;
+          code?: string;
+          message?: string;
+          error?: string;
+        };
+        if (!mounted || store.user?.email !== userEmail) return;
+
+        if (payload.canRequest === true) {
+          setDemoPanelState("idle");
+          setDemoPanelMessage(null);
+        } else if (payload.code === "DEMO_COOLDOWN" || payload.canRequest === false) {
+          setDemoPanelState("cooldown");
+          setDemoPanelMessage(payload.message ?? DEMO_COOLDOWN_MESSAGE);
+        }
+      } catch {
+        // Non-blocking; user can still attempt send
+      }
+    }
+
+    void loadDemoStatus();
+    return () => {
+      mounted = false;
+    };
+  }, [store.user?.email]);
 
   if (!store.user) return <ProtectedDashboardGate />;
   if (redirectingAdmin) {
@@ -53,6 +104,50 @@ export default function SettingsPage() {
   }
 
   const user = store.user;
+
+  async function requestDemoDrill() {
+    setDemoPanelState("sending");
+    setDemoPanelMessage(null);
+    setError("");
+    try {
+      const res = await fetch("/api/account/drills/demo", {
+        method: "POST",
+        cache: "no-store",
+      });
+      const payload = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        code?: string;
+        error?: string;
+      };
+      const body = JSON.stringify(payload);
+      if (body.includes("/drill/") || payload.ok === false && "token" in payload) {
+        setDemoPanelState("error");
+        setDemoPanelMessage("Unexpected response from demo drill API.");
+        return;
+      }
+      if (!res.ok || !payload.ok) {
+        if (payload.code === "DEMO_COOLDOWN") {
+          setDemoPanelState("cooldown");
+          setDemoPanelMessage(payload.message ?? DEMO_COOLDOWN_MESSAGE);
+          return;
+        }
+        setDemoPanelState("error");
+        setDemoPanelMessage(payload.error ?? payload.message ?? "Could not send demo drill.");
+        return;
+      }
+      setDemoPanelState("sent_success");
+      setDemoPanelMessage(DEMO_SUCCESS_MESSAGE);
+    } catch {
+      setDemoPanelState("error");
+      setDemoPanelMessage("Could not send demo drill.");
+    }
+  }
+
+  const demoSendDisabled =
+    demoPanelState === "sending" ||
+    demoPanelState === "sent_success" ||
+    demoPanelState === "cooldown";
 
   async function saveSettings(patch: { trainingActive?: boolean; frequency?: DrillFrequency }) {
     setError("");
@@ -222,14 +317,34 @@ export default function SettingsPage() {
 
         <div className="pt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-navy">Send me a test drill</p>
+            <p className="font-bold text-navy">Send me a demo drill</p>
             <p className="text-sm text-navy/60 mt-0.5 max-w-md">
-              Trigger a one-off practice drill to see how training works. Available once the
-              drill delivery system launches.
+              Want to see how Don&apos;t Bite training works? Send yourself a ParcelPath demo drill.
+              It will arrive as a realistic simulated scam email and will not count toward your
+              training results.
             </p>
+            {demoPanelMessage && (
+              <p
+                className={`text-sm mt-2 font-bold ${
+                  demoPanelState === "sent_success"
+                    ? "text-navy"
+                    : demoPanelState === "error"
+                      ? "text-coral-dark"
+                      : "text-navy/55"
+                }`}
+              >
+                {demoPanelMessage}
+              </p>
+            )}
           </div>
-          <Button variant="ghost" size="sm" disabled className="shrink-0">
-            Coming soon
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            disabled={demoSendDisabled}
+            onClick={() => void requestDemoDrill()}
+          >
+            {demoPanelState === "sending" ? "Sending…" : "Send demo drill"}
           </Button>
         </div>
       </Card>
